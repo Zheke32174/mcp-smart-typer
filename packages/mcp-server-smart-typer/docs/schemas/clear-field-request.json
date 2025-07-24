@@ -1,0 +1,38 @@
+{
+  "$ref": "definitions/clear-field-request",
+  "definitions": {
+    "clear-field-request": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string",
+          "description": "Field identifier to clear"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "selectAll",
+            "backspace",
+            "delete"
+          ],
+          "default": "selectAll",
+          "description": "Method to clear field"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for clearing field content",
+  "$id": "https://schemas.mcp-smart-typer.dev/clear-field-request.json"
+}

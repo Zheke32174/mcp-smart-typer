@@ -1,0 +1,58 @@
+{
+  "$ref": "definitions/take-screenshot-response",
+  "definitions": {
+    "take-screenshot-response": {
+      "type": "object",
+      "properties": {
+        "asyncJobId": {
+          "type": "string",
+          "description": "Async job ID for tracking long-running operations"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code if operation failed"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "success": {
+          "type": "boolean",
+          "description": "Whether screenshot was taken"
+        },
+        "imageData": {
+          "type": "string",
+          "description": "Base64 encoded image data"
+        },
+        "imageSize": {
+          "type": "object",
+          "properties": {
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "width",
+            "height"
+          ],
+          "additionalProperties": false,
+          "description": "Image dimensions"
+        },
+        "filePath": {
+          "type": "string",
+          "description": "Path to saved screenshot file"
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Response schema for screenshot results",
+  "$id": "https://schemas.mcp-smart-typer.dev/take-screenshot-response.json"
+}

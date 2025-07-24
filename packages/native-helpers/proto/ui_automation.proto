@@ -1,0 +1,273 @@
+syntax = "proto3";
+
+package ui_automation;
+
+// Service definition for UI automation
+service UIAutomationService {
+  // Type text into the active window
+  rpc TypeText(TypeTextRequest) returns (TypeTextResponse);
+  
+  // Send key combinations
+  rpc SendKeys(SendKeysRequest) returns (SendKeysResponse);
+  
+  // Get information about the active window
+  rpc GetActiveWindow(GetActiveWindowRequest) returns (GetActiveWindowResponse);
+  
+  // Find an element on the screen
+  rpc FindElement(FindElementRequest) returns (FindElementResponse);
+  
+  // Click at specific coordinates
+  rpc ClickElement(ClickElementRequest) returns (ClickElementResponse);
+  
+  // Enumerate UIA elements (Edit, Document, RichEdit)
+  rpc EnumerateUIAElements(EnumerateUIAElementsRequest) returns (EnumerateUIAElementsResponse);
+  
+  // Type text using UIA element
+  rpc TypeIntoUIAElement(TypeIntoUIAElementRequest) returns (TypeIntoUIAElementResponse);
+  
+  // Get detailed element information
+  rpc GetElementDetails(GetElementDetailsRequest) returns (GetElementDetailsResponse);
+  
+  // Enhanced field detection with fallback methods
+  rpc DetectFields(DetectFieldsRequest) returns (DetectFieldsResponse);
+  
+  // Enhanced field detection with OCR and vision fallback
+  rpc DetectFieldsWithFallback(DetectFieldsRequest) returns (DetectFieldsResponse);
+  
+  // Get field value with source detection
+  rpc GetFieldValue(GetFieldValueRequest) returns (GetFieldValueResponse);
+  
+  // Focus field with source detection
+  rpc FocusField(FocusFieldRequest) returns (FocusFieldResponse);
+  
+  // Health check
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+// Type text request/response
+message TypeTextRequest {
+  string text = 1;
+  optional int32 delay = 2;
+}
+
+message TypeTextResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Send keys request/response
+message SendKeysRequest {
+  string keys = 1;
+  repeated string modifiers = 2;
+}
+
+message SendKeysResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Get active window request/response
+message GetActiveWindowRequest {
+  // Empty for now
+}
+
+message GetActiveWindowResponse {
+  bool success = 1;
+  optional WindowInfo window = 2;
+  optional string message = 3;
+}
+
+// Find element request/response
+message FindElementRequest {
+  string selector = 1;
+  string method = 2;  // text, class, name, id
+  optional int32 timeout = 3;
+}
+
+message FindElementResponse {
+  bool success = 1;
+  optional ElementInfo element = 2;
+  optional string message = 3;
+}
+
+// Click element request/response
+message ClickElementRequest {
+  int32 x = 1;
+  int32 y = 2;
+  optional string button = 3;  // left, right, middle
+  optional bool double_click = 4;
+}
+
+message ClickElementResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Supporting data structures
+message WindowInfo {
+  string title = 1;
+  string class_name = 2;
+  int32 pid = 3;
+  string handle = 4;
+  WindowBounds bounds = 5;
+  bool is_active = 6;
+}
+
+message WindowBounds {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+message ElementInfo {
+  optional string id = 1;
+  optional string name = 2;
+  optional string class_name = 3;
+  ElementBounds bounds = 4;
+  bool is_visible = 5;
+  bool is_enabled = 6;
+  optional string text = 7;
+  string element_type = 8;
+}
+
+message ElementBounds {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+// Enumerate UIA elements request/response
+message EnumerateUIAElementsRequest {
+  optional string window_title = 1;  // Filter by window title
+  repeated string element_types = 2; // Edit, Document, RichEdit, etc.
+  optional bool include_invisible = 3; // Include invisible elements
+}
+
+message EnumerateUIAElementsResponse {
+  bool success = 1;
+  repeated UIAElementInfo elements = 2;
+  optional string message = 3;
+}
+
+// Type into UIA element request/response
+message TypeIntoUIAElementRequest {
+  string element_id = 1;
+  string text = 2;
+  optional bool clear_first = 3;
+  optional bool use_fallback = 4; // Use pyautogui if UIA fails
+}
+
+message TypeIntoUIAElementResponse {
+  bool success = 1;
+  string method_used = 2; // "uia_set_value", "uia_send_keys", "pyautogui"
+  optional string message = 3;
+}
+
+// Get element details request/response
+message GetElementDetailsRequest {
+  string element_id = 1;
+}
+
+message GetElementDetailsResponse {
+  bool success = 1;
+  optional UIAElementInfo element = 2;
+  optional string message = 3;
+}
+
+// UIA Element Information
+message UIAElementInfo {
+  string element_id = 1;
+  string name = 2;
+  string automation_id = 3;
+  string class_name = 4;
+  string control_type = 5;
+  ElementBounds bounds = 6;
+  bool is_visible = 7;
+  bool is_enabled = 8;
+  bool is_focusable = 9;
+  optional string value = 10;
+  optional string help_text = 11;
+  optional string labeled_by = 12;
+  repeated string control_patterns = 13; // ValuePattern, TextPattern, etc.
+  optional string window_title = 14;
+  optional int32 process_id = 15;
+}
+
+// Enhanced field detection request/response
+message DetectFieldsRequest {
+  string context_hint = 1;  // Context hint for field detection
+  optional string window_title = 2;  // Specific window title to focus on
+  optional bool include_hidden = 3;  // Whether to include hidden fields
+  optional float confidence = 4;  // Minimum confidence threshold
+}
+
+message DetectFieldsResponse {
+  bool success = 1;
+  repeated FieldInfo fields = 2;
+  optional WindowInfo window_info = 3;
+  optional string message = 4;
+}
+
+// Field information with metadata
+message FieldInfo {
+  string id = 1;
+  string name = 2;
+  string type = 3;  // text, password, email, etc.
+  optional string description = 4;
+  optional string placeholder = 5;
+  optional int32 max_length = 6;
+  optional string semantic_type = 7;  // Detected semantic type
+  optional bool required = 8;
+  optional string pattern = 9;
+  ElementBounds bounds = 10;
+  optional float confidence = 11;
+  optional string window_handle = 12;
+  optional string control_id = 13;
+  // OCR/Vision metadata
+  optional string ocr_context = 14;
+  optional float ocr_confidence = 15;
+  optional string vision_type = 16;
+  optional float vision_confidence = 17;
+  optional string analysis_method = 18;
+}
+
+// Get field value request/response
+message GetFieldValueRequest {
+  string field_id = 1;
+  optional int32 max_length = 2;
+}
+
+message GetFieldValueResponse {
+  bool success = 1;
+  optional string value = 2;
+  optional FieldInfo field_info = 3;
+  optional bool is_secure = 4;
+  optional string message = 5;
+}
+
+// Focus field request/response
+message FocusFieldRequest {
+  string field_id = 1;
+  optional bool bring_to_front = 2;
+  optional bool scroll_into_view = 3;
+}
+
+message FocusFieldResponse {
+  bool success = 1;
+  optional string previous_focus = 2;
+  optional bool window_brought_to_front = 3;
+  optional string message = 4;
+}
+
+// Health check request/response
+message PingRequest {
+  // Empty
+}
+
+message PingResponse {
+  bool success = 1;
+  string message = 2;
+  int64 timestamp = 3;
+}

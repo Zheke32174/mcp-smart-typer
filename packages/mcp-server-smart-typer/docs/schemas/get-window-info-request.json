@@ -1,0 +1,25 @@
+{
+  "$ref": "definitions/get-window-info-request",
+  "definitions": {
+    "get-window-info-request": {
+      "type": "object",
+      "properties": {
+        "windowTitle": {
+          "type": "string",
+          "description": "Specific window title to get info for"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for retrieving window information",
+  "$id": "https://schemas.mcp-smart-typer.dev/get-window-info-request.json"
+}

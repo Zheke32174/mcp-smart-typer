@@ -1,0 +1,842 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MCP Smart Typer API",
+    "description": "AI-powered typing automation with Windows UI integration",
+    "version": "1.0.0",
+    "contact": {
+      "name": "MCP Smart Typer Team",
+      "url": "https://github.com/mcp-smart-typer/mcp-smart-typer"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "stdio://",
+      "description": "MCP Server over stdio transport"
+    }
+  ],
+  "paths": {
+    "/detect-fields": {
+      "post": {
+        "summary": "Detect fields in the active window",
+        "description": "Analyzes the current window to detect input fields with metadata",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/detect-fields-request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fields detected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/detect-fields-response"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/type-text": {
+      "post": {
+        "summary": "Type text into a field",
+        "description": "Types text into a specified field with configurable options",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/type-text-request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Text typed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/type-text-response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "detect-fields-request": {
+        "type": "object",
+        "properties": {
+          "contextHint": {
+            "type": "string",
+            "description": "Context hint for field detection (e.g., \"login-form\", \"search-box\")"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          },
+          "windowTitle": {
+            "type": "string",
+            "description": "Specific window title to focus on"
+          },
+          "includeHidden": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to include hidden fields"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "default": 0.8,
+            "description": "Minimum confidence threshold for detection"
+          }
+        },
+        "required": [
+          "contextHint"
+        ],
+        "additionalProperties": false
+      },
+      "detect-fields-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Unique field identifier"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Field name or label"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Field type (input, textarea, select, etc.)"
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "description": "Field description"
+                    },
+                    "placeholder": {
+                      "type": "string",
+                      "description": "Field placeholder text"
+                    },
+                    "maxLength": {
+                      "type": "number",
+                      "description": "Maximum input length"
+                    },
+                    "inputType": {
+                      "type": "string",
+                      "enum": [
+                        "text",
+                        "password",
+                        "email",
+                        "number",
+                        "tel",
+                        "url"
+                      ],
+                      "description": "Input field type"
+                    },
+                    "required": {
+                      "type": "boolean",
+                      "description": "Whether field is required"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "description": "Validation pattern regex"
+                    },
+                    "bounds": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "number"
+                        },
+                        "y": {
+                          "type": "number"
+                        },
+                        "width": {
+                          "type": "number"
+                        },
+                        "height": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y",
+                        "width",
+                        "height"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Field coordinates and dimensions"
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "description": "Detection confidence score"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "type"
+              ],
+              "additionalProperties": false
+            },
+            "description": "List of detected fields with metadata"
+          },
+          "windowInfo": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              },
+              "handle": {
+                "type": "string"
+              },
+              "bounds": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number"
+                  },
+                  "height": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "width",
+                  "height"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title",
+              "className",
+              "handle",
+              "bounds"
+            ],
+            "additionalProperties": false,
+            "description": "Information about the active window"
+          }
+        },
+        "required": [
+          "fields"
+        ],
+        "additionalProperties": false
+      },
+      "type-text-request": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "description": "Target field identifier"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text to type"
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "delay": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5000,
+                "default": 50,
+                "description": "Delay between keystrokes in milliseconds"
+              },
+              "clearFirst": {
+                "type": "boolean",
+                "default": false,
+                "description": "Clear field before typing"
+              },
+              "pressEnter": {
+                "type": "boolean",
+                "default": false,
+                "description": "Press Enter after typing"
+              },
+              "simulate": {
+                "type": "boolean",
+                "default": false,
+                "description": "Simulate typing without actual input (for testing)"
+              }
+            },
+            "additionalProperties": false
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          }
+        },
+        "required": [
+          "fieldId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "type-text-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether typing was successful"
+          },
+          "charactersTyped": {
+            "type": "number",
+            "description": "Number of characters successfully typed"
+          },
+          "timeTaken": {
+            "type": "number",
+            "description": "Time taken to complete operation in milliseconds"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      },
+      "get-field-value-request": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "description": "Field identifier to read from"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          },
+          "maxLength": {
+            "type": "number",
+            "default": 10000,
+            "description": "Maximum length of value to retrieve"
+          }
+        },
+        "required": [
+          "fieldId"
+        ],
+        "additionalProperties": false
+      },
+      "get-field-value-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "value": {
+            "type": "string",
+            "description": "Current field value"
+          },
+          "fieldInfo": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique field identifier"
+              },
+              "name": {
+                "type": "string",
+                "description": "Field name or label"
+              },
+              "type": {
+                "type": "string",
+                "description": "Field type (input, textarea, select, etc.)"
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Field description"
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "description": "Field placeholder text"
+                  },
+                  "maxLength": {
+                    "type": "number",
+                    "description": "Maximum input length"
+                  },
+                  "inputType": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "password",
+                      "email",
+                      "number",
+                      "tel",
+                      "url"
+                    ],
+                    "description": "Input field type"
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "description": "Whether field is required"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "description": "Validation pattern regex"
+                  },
+                  "bounds": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Field coordinates and dimensions"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Detection confidence score"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type"
+            ],
+            "additionalProperties": false,
+            "description": "Updated field information"
+          },
+          "isSecure": {
+            "type": "boolean",
+            "description": "Whether field contains sensitive data"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "focus-field-request": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "description": "Field identifier to focus"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          },
+          "bringToFront": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to bring window to front"
+          },
+          "scrollIntoView": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to scroll field into view"
+          }
+        },
+        "required": [
+          "fieldId"
+        ],
+        "additionalProperties": false
+      },
+      "focus-field-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether focus was successful"
+          },
+          "previousFocus": {
+            "type": "string",
+            "description": "Previously focused element ID"
+          },
+          "windowBroughtToFront": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether window was brought to front"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      },
+      "clear-field-request": {
+        "type": "object",
+        "properties": {
+          "fieldId": {
+            "type": "string",
+            "description": "Field identifier to clear"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "selectAll",
+              "backspace",
+              "delete"
+            ],
+            "default": "selectAll",
+            "description": "Method to clear field"
+          }
+        },
+        "required": [
+          "fieldId"
+        ],
+        "additionalProperties": false
+      },
+      "clear-field-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether clearing was successful"
+          },
+          "previousValue": {
+            "type": "string",
+            "description": "Previous field value (if not secure)"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      },
+      "get-window-info-request": {
+        "type": "object",
+        "properties": {
+          "windowTitle": {
+            "type": "string",
+            "description": "Specific window title to get info for"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          }
+        },
+        "additionalProperties": false
+      },
+      "get-window-info-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "className": {
+                  "type": "string"
+                },
+                "handle": {
+                  "type": "string"
+                },
+                "pid": {
+                  "type": "number"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "bounds": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "width": {
+                      "type": "number"
+                    },
+                    "height": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "width",
+                    "height"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "title",
+                "className",
+                "handle",
+                "pid",
+                "isActive",
+                "bounds"
+              ],
+              "additionalProperties": false
+            },
+            "description": "List of available windows"
+          },
+          "activeWindow": {
+            "type": "string",
+            "description": "Handle of currently active window"
+          }
+        },
+        "required": [
+          "windows"
+        ],
+        "additionalProperties": false
+      },
+      "take-screenshot-request": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "description": "Specific region to capture"
+          },
+          "securityFlags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Security flags for operation validation"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "png",
+              "jpeg"
+            ],
+            "default": "png",
+            "description": "Image format"
+          },
+          "quality": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 90,
+            "description": "Image quality for JPEG"
+          }
+        },
+        "additionalProperties": false
+      },
+      "take-screenshot-response": {
+        "type": "object",
+        "properties": {
+          "asyncJobId": {
+            "type": "string",
+            "description": "Async job ID for tracking long-running operations"
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Error code if operation failed"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "Whether screenshot was taken"
+          },
+          "imageData": {
+            "type": "string",
+            "description": "Base64 encoded image data"
+          },
+          "imageSize": {
+            "type": "object",
+            "properties": {
+              "width": {
+                "type": "number"
+              },
+              "height": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "description": "Image dimensions"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "Path to saved screenshot file"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

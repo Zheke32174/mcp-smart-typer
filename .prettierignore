@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+*.min.js
+*.min.css
+coverage/
+.nyc_output/
+pnpm-lock.yaml
+*.proto
+*.pb.js
+*.pb.ts

@@ -1,0 +1,129 @@
+{
+  "test_summary": {
+    "version": "2.1.0",
+    "timestamp": "2025-07-23T18:13:10.932018",
+    "success_rate": 60.0,
+    "total_duration": 23.269522428512573,
+    "focus": "Indistinguishable Human-Like Desktop Interaction"
+  },
+  "test_results": {
+    "Natural Mouse Movement": {
+      "test_cases": 4,
+      "avg_human_score": 0.5815106898372235,
+      "avg_path_efficiency": 0.9944285345797457,
+      "success_rate": 1.0
+    },
+    "Window Management": {
+      "windows_processed": 4,
+      "operations_completed": 8,
+      "successful_operations": 8,
+      "success_rate": 1.0,
+      "avg_accuracy": 0.910731743228612
+    },
+    "Human-Like Typing": {
+      "texts_typed": 3,
+      "avg_wpm": 68.46391371958929,
+      "avg_accuracy": 0.9833333333333334,
+      "human_rhythm_score": 0.92253205081357
+    },
+    "Click Pattern Analysis": {
+      "click_types_tested": 4,
+      "total_clicks": 32,
+      "avg_accuracy": 0.7803105802511421,
+      "timing_precision": 0.9389769278406238
+    },
+    "Performance Optimization": {
+      "memory_efficiency": 0.885234375,
+      "cpu_efficiency": 0.98,
+      "data_processed": 100000,
+      "computations_completed": 5000,
+      "optimization_score": 0.9326171875
+    }
+  },
+  "performance_metrics": [
+    {
+      "operation": "Natural Mouse Movement",
+      "execution_time_ms": 1674.0813255310059,
+      "memory_usage_mb": -0.609375,
+      "cpu_delta": 2.4000000000000004,
+      "success": true,
+      "result": {
+        "test_cases": 4,
+        "avg_human_score": 0.5815106898372235,
+        "avg_path_efficiency": 0.9944285345797457,
+        "success_rate": 1.0
+      }
+    },
+    {
+      "operation": "Window Management",
+      "execution_time_ms": 2296.903610229492,
+      "memory_usage_mb": -0.00390625,
+      "cpu_delta": -0.7000000000000002,
+      "success": true,
+      "result": {
+        "windows_processed": 4,
+        "operations_completed": 8,
+        "successful_operations": 8,
+        "success_rate": 1.0,
+        "avg_accuracy": 0.910731743228612
+      }
+    },
+    {
+      "operation": "Human-Like Typing",
+      "execution_time_ms": 9016.675233840942,
+      "memory_usage_mb": 0.00390625,
+      "cpu_delta": -0.20000000000000018,
+      "success": true,
+      "result": {
+        "texts_typed": 3,
+        "avg_wpm": 68.46391371958929,
+        "avg_accuracy": 0.9833333333333334,
+        "human_rhythm_score": 0.92253205081357
+      }
+    },
+    {
+      "operation": "Click Pattern Analysis",
+      "execution_time_ms": 8386.303901672363,
+      "memory_usage_mb": -0.015625,
+      "cpu_delta": 20.9,
+      "success": true,
+      "result": {
+        "click_types_tested": 4,
+        "total_clicks": 32,
+        "avg_accuracy": 0.7803105802511421,
+        "timing_precision": 0.9389769278406238
+      }
+    },
+    {
+      "operation": "Performance Optimization",
+      "execution_time_ms": 886.2457275390625,
+      "memory_usage_mb": 3.078125,
+      "cpu_delta": -15.7,
+      "success": true,
+      "result": {
+        "memory_efficiency": 0.885234375,
+        "cpu_efficiency": 0.98,
+        "data_processed": 100000,
+        "computations_completed": 5000,
+        "optimization_score": 0.9326171875
+      }
+    }
+  ],
+  "optimization_recommendations": [
+    "Implement hardware-accelerated mouse movement tracking",
+    "Use predictive algorithms for common UI interaction patterns",
+    "Optimize Bezier curve calculations with precomputed lookup tables",
+    "Implement adaptive learning from user behavior patterns",
+    "Use multi-threading for parallel window detection and interaction",
+    "Cache frequently accessed screen regions for faster processing",
+    "Implement smart retry mechanisms for failed interactions"
+  ],
+  "human_likeness_features": [
+    "Natural Bezier curve mouse paths with micro-corrections",
+    "Realistic typing patterns with mistakes and corrections",
+    "Human-like click timing and positioning jitter",
+    "Adaptive speed based on distance (Fitts's Law implementation)",
+    "Natural pauses and hesitation patterns",
+    "Window interaction with realistic grab accuracy"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "$ref": "definitions/type-text-response",
+  "definitions": {
+    "type-text-response": {
+      "type": "object",
+      "properties": {
+        "asyncJobId": {
+          "type": "string",
+          "description": "Async job ID for tracking long-running operations"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code if operation failed"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "success": {
+          "type": "boolean",
+          "description": "Whether typing was successful"
+        },
+        "charactersTyped": {
+          "type": "number",
+          "description": "Number of characters successfully typed"
+        },
+        "timeTaken": {
+          "type": "number",
+          "description": "Time taken to complete operation in milliseconds"
+        }
+      },
+      "required": [
+        "success"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Response schema for text typing results",
+  "example": {
+    "success": true,
+    "charactersTyped": 19,
+    "timeTaken": 950,
+    "asyncJobId": "job_12345"
+  },
+  "$id": "https://schemas.mcp-smart-typer.dev/type-text-response.json"
+}

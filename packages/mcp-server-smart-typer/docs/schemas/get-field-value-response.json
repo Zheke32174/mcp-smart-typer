@@ -1,0 +1,130 @@
+{
+  "$ref": "definitions/get-field-value-response",
+  "definitions": {
+    "get-field-value-response": {
+      "type": "object",
+      "properties": {
+        "asyncJobId": {
+          "type": "string",
+          "description": "Async job ID for tracking long-running operations"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code if operation failed"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "value": {
+          "type": "string",
+          "description": "Current field value"
+        },
+        "fieldInfo": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Unique field identifier"
+            },
+            "name": {
+              "type": "string",
+              "description": "Field name or label"
+            },
+            "type": {
+              "type": "string",
+              "description": "Field type (input, textarea, select, etc.)"
+            },
+            "metadata": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "description": "Field description"
+                },
+                "placeholder": {
+                  "type": "string",
+                  "description": "Field placeholder text"
+                },
+                "maxLength": {
+                  "type": "number",
+                  "description": "Maximum input length"
+                },
+                "inputType": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "password",
+                    "email",
+                    "number",
+                    "tel",
+                    "url"
+                  ],
+                  "description": "Input field type"
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "Whether field is required"
+                },
+                "pattern": {
+                  "type": "string",
+                  "description": "Validation pattern regex"
+                },
+                "bounds": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "width": {
+                      "type": "number"
+                    },
+                    "height": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y",
+                    "width",
+                    "height"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Field coordinates and dimensions"
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Detection confidence score"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "type"
+          ],
+          "additionalProperties": false,
+          "description": "Updated field information"
+        },
+        "isSecure": {
+          "type": "boolean",
+          "description": "Whether field contains sensitive data"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Response schema for field value retrieval",
+  "$id": "https://schemas.mcp-smart-typer.dev/get-field-value-response.json"
+}

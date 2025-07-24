@@ -1,0 +1,62 @@
+{
+  "$ref": "definitions/take-screenshot-request",
+  "definitions": {
+    "take-screenshot-request": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y",
+            "width",
+            "height"
+          ],
+          "additionalProperties": false,
+          "description": "Specific region to capture"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpeg"
+          ],
+          "default": "png",
+          "description": "Image format"
+        },
+        "quality": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 90,
+          "description": "Image quality for JPEG"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for taking screenshots",
+  "$id": "https://schemas.mcp-smart-typer.dev/take-screenshot-request.json"
+}

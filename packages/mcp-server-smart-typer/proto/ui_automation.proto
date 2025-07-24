@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package ui_automation;
+
+// Service definition for UI automation
+service UIAutomationService {
+  // Type text into the active window
+  rpc TypeText(TypeTextRequest) returns (TypeTextResponse);
+  
+  // Send key combinations
+  rpc SendKeys(SendKeysRequest) returns (SendKeysResponse);
+  
+  // Get information about the active window
+  rpc GetActiveWindow(GetActiveWindowRequest) returns (GetActiveWindowResponse);
+  
+  // Find an element on the screen
+  rpc FindElement(FindElementRequest) returns (FindElementResponse);
+  
+  // Click at specific coordinates
+  rpc ClickElement(ClickElementRequest) returns (ClickElementResponse);
+}
+
+// Type text request/response
+message TypeTextRequest {
+  string text = 1;
+  optional int32 delay = 2;
+}
+
+message TypeTextResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Send keys request/response
+message SendKeysRequest {
+  string keys = 1;
+  repeated string modifiers = 2;
+}
+
+message SendKeysResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Get active window request/response
+message GetActiveWindowRequest {
+  // Empty for now
+}
+
+message GetActiveWindowResponse {
+  bool success = 1;
+  optional WindowInfo window = 2;
+  optional string message = 3;
+}
+
+// Find element request/response
+message FindElementRequest {
+  string selector = 1;
+  string method = 2;  // text, class, name, id
+  optional int32 timeout = 3;
+}
+
+message FindElementResponse {
+  bool success = 1;
+  optional ElementInfo element = 2;
+  optional string message = 3;
+}
+
+// Click element request/response
+message ClickElementRequest {
+  int32 x = 1;
+  int32 y = 2;
+  optional string button = 3;  // left, right, middle
+  optional bool double_click = 4;
+}
+
+message ClickElementResponse {
+  bool success = 1;
+  optional string message = 2;
+}
+
+// Supporting data structures
+message WindowInfo {
+  string title = 1;
+  string class_name = 2;
+  int32 pid = 3;
+  string handle = 4;
+  WindowBounds bounds = 5;
+  bool is_active = 6;
+}
+
+message WindowBounds {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}
+
+message ElementInfo {
+  optional string id = 1;
+  optional string name = 2;
+  optional string class_name = 3;
+  ElementBounds bounds = 4;
+  bool is_visible = 5;
+  bool is_enabled = 6;
+  optional string text = 7;
+  string element_type = 8;
+}
+
+message ElementBounds {
+  int32 x = 1;
+  int32 y = 2;
+  int32 width = 3;
+  int32 height = 4;
+}

@@ -1,0 +1,220 @@
+{
+  "$ref": "definitions/detect-fields-response",
+  "definitions": {
+    "detect-fields-response": {
+      "type": "object",
+      "properties": {
+        "asyncJobId": {
+          "type": "string",
+          "description": "Async job ID for tracking long-running operations"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code if operation failed"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique field identifier"
+              },
+              "name": {
+                "type": "string",
+                "description": "Field name or label"
+              },
+              "type": {
+                "type": "string",
+                "description": "Field type (input, textarea, select, etc.)"
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Field description"
+                  },
+                  "placeholder": {
+                    "type": "string",
+                    "description": "Field placeholder text"
+                  },
+                  "maxLength": {
+                    "type": "number",
+                    "description": "Maximum input length"
+                  },
+                  "inputType": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "password",
+                      "email",
+                      "number",
+                      "tel",
+                      "url"
+                    ],
+                    "description": "Input field type"
+                  },
+                  "required": {
+                    "type": "boolean",
+                    "description": "Whether field is required"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "description": "Validation pattern regex"
+                  },
+                  "bounds": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number"
+                      },
+                      "y": {
+                        "type": "number"
+                      },
+                      "width": {
+                        "type": "number"
+                      },
+                      "height": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Field coordinates and dimensions"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Detection confidence score"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          "description": "List of detected fields with metadata"
+        },
+        "windowInfo": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "className": {
+              "type": "string"
+            },
+            "handle": {
+              "type": "string"
+            },
+            "bounds": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "width": {
+                  "type": "number"
+                },
+                "height": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "width",
+                "height"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "title",
+            "className",
+            "handle",
+            "bounds"
+          ],
+          "additionalProperties": false,
+          "description": "Information about the active window"
+        }
+      },
+      "required": [
+        "fields"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Response schema for field detection results",
+  "example": {
+    "fields": [
+      {
+        "id": "field_username_001",
+        "name": "username",
+        "type": "input",
+        "metadata": {
+          "description": "Username input field",
+          "inputType": "text",
+          "required": true,
+          "bounds": {
+            "x": 100,
+            "y": 200,
+            "width": 200,
+            "height": 30
+          },
+          "confidence": 0.95
+        }
+      },
+      {
+        "id": "field_password_002",
+        "name": "password",
+        "type": "input",
+        "metadata": {
+          "description": "Password input field",
+          "inputType": "password",
+          "required": true,
+          "bounds": {
+            "x": 100,
+            "y": 250,
+            "width": 200,
+            "height": 30
+          },
+          "confidence": 0.92
+        }
+      }
+    ],
+    "windowInfo": {
+      "title": "Login - My App",
+      "className": "Chrome_WidgetWin_1",
+      "handle": "0x001234AB",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080
+      }
+    }
+  },
+  "$id": "https://schemas.mcp-smart-typer.dev/detect-fields-response.json"
+}

@@ -1,0 +1,38 @@
+{
+  "$ref": "definitions/focus-field-request",
+  "definitions": {
+    "focus-field-request": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string",
+          "description": "Field identifier to focus"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        },
+        "bringToFront": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to bring window to front"
+        },
+        "scrollIntoView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to scroll field into view"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for focusing a field",
+  "$id": "https://schemas.mcp-smart-typer.dev/focus-field-request.json"
+}

@@ -1,0 +1,90 @@
+{
+  "$ref": "definitions/get-window-info-response",
+  "definitions": {
+    "get-window-info-response": {
+      "type": "object",
+      "properties": {
+        "asyncJobId": {
+          "type": "string",
+          "description": "Async job ID for tracking long-running operations"
+        },
+        "errorCode": {
+          "type": "string",
+          "description": "Error code if operation failed"
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "className": {
+                "type": "string"
+              },
+              "handle": {
+                "type": "string"
+              },
+              "pid": {
+                "type": "number"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "bounds": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "width": {
+                    "type": "number"
+                  },
+                  "height": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "width",
+                  "height"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "title",
+              "className",
+              "handle",
+              "pid",
+              "isActive",
+              "bounds"
+            ],
+            "additionalProperties": false
+          },
+          "description": "List of available windows"
+        },
+        "activeWindow": {
+          "type": "string",
+          "description": "Handle of currently active window"
+        }
+      },
+      "required": [
+        "windows"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Response schema for window information",
+  "$id": "https://schemas.mcp-smart-typer.dev/get-window-info-response.json"
+}

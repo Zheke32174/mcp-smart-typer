@@ -1,0 +1,74 @@
+{
+  "$ref": "definitions/type-text-request",
+  "definitions": {
+    "type-text-request": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string",
+          "description": "Target field identifier"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to type"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "delay": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000,
+              "default": 50,
+              "description": "Delay between keystrokes in milliseconds"
+            },
+            "clearFirst": {
+              "type": "boolean",
+              "default": false,
+              "description": "Clear field before typing"
+            },
+            "pressEnter": {
+              "type": "boolean",
+              "default": false,
+              "description": "Press Enter after typing"
+            },
+            "simulate": {
+              "type": "boolean",
+              "default": false,
+              "description": "Simulate typing without actual input (for testing)"
+            }
+          },
+          "additionalProperties": false
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        }
+      },
+      "required": [
+        "fieldId",
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for typing text into a field",
+  "example": {
+    "fieldId": "field_username_001",
+    "text": "john.doe@example.com",
+    "options": {
+      "delay": 50,
+      "clearFirst": true,
+      "pressEnter": false,
+      "simulate": false
+    },
+    "securityFlags": [
+      "encrypted"
+    ]
+  },
+  "$id": "https://schemas.mcp-smart-typer.dev/type-text-request.json"
+}

@@ -1,0 +1,137 @@
+{
+  "demo_overview": {
+    "total_duration_seconds": 2.752,
+    "total_duration_minutes": 0.05,
+    "phases_total": 4,
+    "phases_successful": 4,
+    "overall_success_rate": 1.0,
+    "demo_timestamp": 1753330447.9819717
+  },
+  "performance_summary": {
+    "mouse_avg_move_time_ms": 0.105,
+    "keyboard_avg_chars_per_sec": 92.6,
+    "bulk_moves_per_second": 363.2,
+    "bulk_chars_per_second": 159.8
+  },
+  "component_metrics": {
+    "mouse_controller": {
+      "move_actual": {
+        "total_operations": 23,
+        "successful_operations": 23,
+        "success_rate": 1.0,
+        "avg_time_ms": 0.076,
+        "min_time_ms": 0.016,
+        "max_time_ms": 0.18
+      },
+      "click_left": {
+        "total_operations": 3,
+        "successful_operations": 3,
+        "success_rate": 1.0,
+        "avg_time_ms": 5.613,
+        "min_time_ms": 2.369,
+        "max_time_ms": 10.388
+      }
+    },
+    "keyboard_controller": {
+      "type_text": {
+        "total_operations": 12,
+        "successful_operations": 12,
+        "success_rate": 1.0,
+        "avg_time_ms": 53.886,
+        "min_time_ms": 15.253,
+        "max_time_ms": 174.296
+      },
+      "press_key": {
+        "total_operations": 3,
+        "successful_operations": 3,
+        "success_rate": 1.0,
+        "avg_time_ms": 10.796,
+        "min_time_ms": 10.558,
+        "max_time_ms": 10.935
+      }
+    }
+  },
+  "detailed_results": {
+    "system_info": {
+      "duration_seconds": 0.04,
+      "cpu_cores": 32,
+      "memory_percent": 49.0,
+      "mouse_pos_time_ms": 0.0,
+      "status": "SUCCESS"
+    },
+    "mouse_performance": {
+      "duration_seconds": 0.666,
+      "movements_tested": 5,
+      "successful_moves": 5,
+      "avg_movement_time_ms": 0.105,
+      "clicks_tested": 3,
+      "successful_clicks": 3,
+      "status": "SUCCESS"
+    },
+    "keyboard_performance": {
+      "duration_seconds": 1.732,
+      "texts_tested": 4,
+      "avg_chars_per_second": 92.6,
+      "typing_success_rate": 1.0,
+      "special_keys_tested": 3,
+      "typing_results": [
+        {
+          "text_length": 11,
+          "duration_ms": 118.356,
+          "chars_per_second": 92.9,
+          "success": true
+        },
+        {
+          "text_length": 11,
+          "duration_ms": 118.771,
+          "chars_per_second": 92.6,
+          "success": true
+        },
+        {
+          "text_length": 10,
+          "duration_ms": 107.335,
+          "chars_per_second": 93.2,
+          "success": true
+        },
+        {
+          "text_length": 16,
+          "duration_ms": 174.318,
+          "chars_per_second": 91.8,
+          "success": true
+        }
+      ],
+      "key_results": [
+        {
+          "key": "ENTER",
+          "duration_ms": 10.951,
+          "success": true
+        },
+        {
+          "key": "SPACE",
+          "duration_ms": 10.906,
+          "success": true
+        },
+        {
+          "key": "TAB",
+          "duration_ms": 10.563,
+          "success": true
+        }
+      ],
+      "status": "SUCCESS"
+    },
+    "bulk_operations": {
+      "duration_seconds": 0.297,
+      "bulk_moves": {
+        "total": 15,
+        "successful": 15,
+        "moves_per_second": 363.2
+      },
+      "bulk_typing": {
+        "total": 8,
+        "successful": 8,
+        "chars_per_second": 159.8
+      },
+      "status": "SUCCESS"
+    }
+  }
+}

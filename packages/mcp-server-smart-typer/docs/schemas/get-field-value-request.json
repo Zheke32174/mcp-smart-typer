@@ -1,0 +1,33 @@
+{
+  "$ref": "definitions/get-field-value-request",
+  "definitions": {
+    "get-field-value-request": {
+      "type": "object",
+      "properties": {
+        "fieldId": {
+          "type": "string",
+          "description": "Field identifier to read from"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        },
+        "maxLength": {
+          "type": "number",
+          "default": 10000,
+          "description": "Maximum length of value to retrieve"
+        }
+      },
+      "required": [
+        "fieldId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for retrieving field values",
+  "$id": "https://schemas.mcp-smart-typer.dev/get-field-value-request.json"
+}

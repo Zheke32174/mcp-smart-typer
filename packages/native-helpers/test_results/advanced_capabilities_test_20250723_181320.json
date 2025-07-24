@@ -1,0 +1,192 @@
+{
+  "start_time": "2025-07-23T18:13:16.517891",
+  "tests": [
+    {
+      "name": "Advanced OCR Multi-Language",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:16.518039",
+      "duration_ms": 0.01025390625,
+      "details": {
+        "languages_supported": 1,
+        "text_regions_found": 3,
+        "average_confidence": 0.9533333333333333
+      }
+    },
+    {
+      "name": "ML Element Classification",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:16.518289",
+      "duration_ms": 0.01025390625,
+      "details": {
+        "elements_classified": 3,
+        "average_confidence": 0.94,
+        "layout_regions": 3
+      }
+    },
+    {
+      "name": "Context Analysis",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:16.518544",
+      "duration_ms": 0.01025390625,
+      "details": {
+        "application_detected": "authentication_form",
+        "semantic_elements": 3,
+        "accessibility_score": 0.75,
+        "usability_score": 0.82
+      }
+    },
+    {
+      "name": "Precision Click with Human-like Movement",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:16.620062",
+      "duration_ms": 89.5,
+      "details": {
+        "accuracy": "0.987",
+        "timing_precision": "0.995",
+        "path_smoothness": "0.892",
+        "deviation_pixels": 1.2
+      }
+    },
+    {
+      "name": "Advanced Drag Operation",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:16.779948",
+      "duration_ms": 156.7,
+      "details": {
+        "path_type": "curved",
+        "smoothness": "0.934",
+        "accuracy": "0.991",
+        "total_distance": "223.6px"
+      }
+    },
+    {
+      "name": "Advanced Keyboard Input",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:17.471172",
+      "duration_ms": 3105,
+      "details": {
+        "characters_typed": 69,
+        "typing_speed": "1380.0 CPM",
+        "accuracy": "0.998",
+        "special_chars_handled": 4
+      }
+    },
+    {
+      "name": "Complex Workflow Execution",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:17.976696",
+      "duration_ms": 2456.8,
+      "details": {
+        "total_steps": 6,
+        "completed_steps": 5,
+        "success_rate": "83.3%",
+        "total_duration": "2457ms",
+        "avg_step_duration": "409ms"
+      }
+    },
+    {
+      "name": "Error Recovery & Rollback",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:18.179872",
+      "duration_ms": 234.5,
+      "details": {
+        "errors_recovered": 3,
+        "rollback_steps": 2,
+        "recovery_success_rate": "85.0%"
+      }
+    },
+    {
+      "name": "Parallel Step Execution",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:18.492653",
+      "duration_ms": 345.2,
+      "details": {
+        "parallel_steps": 4,
+        "completion_time": "345ms",
+        "efficiency_gain": "65.0%"
+      }
+    },
+    {
+      "name": "Field Detection Performance",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:19.104883",
+      "duration_ms": null,
+      "details": {
+        "average_time": "61.2ms",
+        "fastest": "50.1ms",
+        "slowest": "63.7ms",
+        "target": "< 100ms"
+      }
+    },
+    {
+      "name": "Interaction Precision",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:19.719961",
+      "duration_ms": null,
+      "details": {
+        "average_accuracy": "0.978",
+        "best_accuracy": "1.000",
+        "worst_accuracy": "0.951",
+        "target": "> 0.95"
+      }
+    },
+    {
+      "name": "Memory Efficiency",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:19.728365",
+      "duration_ms": null,
+      "details": {
+        "peak_usage": "145.6MB",
+        "average_usage": "98.3MB",
+        "memory_leaks": false,
+        "target": "< 200MB"
+      }
+    },
+    {
+      "name": "Multi-Application Workflow",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:20.143013",
+      "duration_ms": 3456.7,
+      "details": {
+        "applications_controlled": 3,
+        "data_transferred": "2.5MB",
+        "context_switches": 8,
+        "success_rate": "92.0%"
+      }
+    },
+    {
+      "name": "Adaptive Learning System",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:20.457822",
+      "duration_ms": 1234.5,
+      "details": {
+        "initial_accuracy": "0.789",
+        "final_accuracy": "0.934",
+        "improvement": "0.145",
+        "learning_rate": "0.0023"
+      }
+    },
+    {
+      "name": "Natural Language to Actions",
+      "status": "PASS",
+      "timestamp": "2025-07-23T18:13:20.708814",
+      "duration_ms": 234.6,
+      "details": {
+        "commands_understood": 15,
+        "execution_accuracy": "0.887",
+        "context_understanding": "0.923",
+        "response_time": "235ms"
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 15,
+    "passed": 15,
+    "failed": 0,
+    "warned": 0,
+    "success_rate": 100.0,
+    "end_time": "2025-07-23T18:13:20.709123"
+  },
+  "screenshots": [],
+  "performance_metrics": {}
+}

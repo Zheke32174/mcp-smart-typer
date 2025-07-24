@@ -1,0 +1,53 @@
+{
+  "$ref": "definitions/detect-fields-request",
+  "definitions": {
+    "detect-fields-request": {
+      "type": "object",
+      "properties": {
+        "contextHint": {
+          "type": "string",
+          "description": "Context hint for field detection (e.g., \"login-form\", \"search-box\")"
+        },
+        "securityFlags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Security flags for operation validation"
+        },
+        "windowTitle": {
+          "type": "string",
+          "description": "Specific window title to focus on"
+        },
+        "includeHidden": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to include hidden fields"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.8,
+          "description": "Minimum confidence threshold for detection"
+        }
+      },
+      "required": [
+        "contextHint"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Request schema for detecting fields in the active window",
+  "example": {
+    "contextHint": "login-form",
+    "securityFlags": [
+      "authenticated"
+    ],
+    "windowTitle": "Login - My App",
+    "includeHidden": false,
+    "confidence": 0.8
+  },
+  "$id": "https://schemas.mcp-smart-typer.dev/detect-fields-request.json"
+}
