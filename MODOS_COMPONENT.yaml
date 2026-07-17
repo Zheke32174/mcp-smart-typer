@@ -1,0 +1,37 @@
+apiVersion: modos.pleiades/v1alpha1
+kind: Component
+metadata:
+  name: mcp-smart-interaction-adapter
+  repository: Zheke32174/mcp-smart-typer
+  visibility: private
+  lifecycle: experimental
+  defaultBranch: main
+spec:
+  roles:
+    - mcp-interface-adapter
+    - typed-input-assistance
+    - human-computer-interaction-bridge
+  authority: proposal
+  inputs:
+    - steward-input
+    - tool-schemas
+    - bounded-ui-context
+  outputs:
+    - typed-tool-requests
+    - interaction-events
+    - input-assistance-proposals
+  capabilitiesProvided:
+    - mcp.request.compose
+    - interaction.input.assist
+    - tool.schema.render
+  capabilitiesRequired:
+    - identity.user.local
+    - tool.schema.read
+    - accessibility.context.read.scoped
+  dataClasses:
+    - private
+    - internal
+    - untrusted
+  failurePolicy: non-operational
+  promotionPolicy: steward-approval
+  notes: Input assistance produces explicit typed requests and never silently invokes tools or expands user authority.
