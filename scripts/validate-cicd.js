@@ -1,149 +1,116 @@
 #!/usr/bin/env node
 
 /**
- * CI/CD Validation Script
- * 
- * This script validates that all CI/CD components are properly configured
- * and can be tested locally before pushing to trigger the pipeline.
+ * Static release-boundary validation.
+ *
+ * This script deliberately does not install dependencies, build packages, publish
+ * artifacts, or contact a registry. It validates that committed metadata and
+ * workflows preserve repository ownership and fail-closed test behavior.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
-console.log('🔍 Validating CI/CD Pipeline Components...\n');
+const failures = [];
 
-let hasErrors = false;
-
-function checkError(condition, message) {
-    if (condition) {
-        console.log(`❌ ${message}`);
-        hasErrors = true;
-    } else {
-        console.log(`✅ ${message}`);
-    }
+function requireFile(file) {
+  if (!fs.existsSync(file)) {
+    failures.push(`required file missing: ${file}`);
+    return '';
+  }
+  return fs.readFileSync(file, 'utf8');
 }
 
-// 1. Check repository structure
-console.log('📁 Repository Structure');
-checkError(!fs.existsSync('.github/workflows/ci.yml'), 'GitHub Actions workflow exists');
-checkError(!fs.existsSync('packages/mcp-server-smart-typer/package.json'), 'MCP server package exists');
-checkError(!fs.existsSync('packages/mcp-server-smart-typer/tsconfig.json'), 'TypeScript config exists');
-checkError(!fs.existsSync('packages/native-helpers/pyproject.toml'), 'Python package config exists');
-checkError(!fs.existsSync('packages/native-helpers/build_uia_server.spec'), 'PyInstaller spec exists');
-console.log('');
-
-// 2. Check package.json configurations
-console.log('📦 Package Configuration');
-const rootPackage = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-const serverPackage = JSON.parse(fs.readFileSync('packages/mcp-server-smart-typer/package.json', 'utf8'));
-
-checkError(!rootPackage.scripts['prepare-release'], 'Release script configured in root package');
-checkError(!serverPackage.dependencies['@modelcontextprotocol/sdk'], 'MCP SDK dependency present');
-checkError(!serverPackage.keywords.includes('mcp'), 'MCP keywords present');
-checkError(!serverPackage.bin, 'Binary entries configured');
-console.log('');
-
-// 3. Check Python configuration
-console.log('🐍 Python Configuration');
-const pyprojectContent = fs.readFileSync('packages/native-helpers/pyproject.toml', 'utf8');
-checkError(!pyprojectContent.includes('PyInstaller'), 'PyInstaller dependency configured');
-checkError(!pyprojectContent.includes('grpc'), 'gRPC dependencies configured');
-console.log('');
-
-// 4. Check build scripts
-console.log('🛠️  Build Scripts');
-try {
-    // Check if pnpm is available
-    execSync('pnpm --version', { stdio: 'ignore' });
-    console.log('✅ pnpm is available');
-    
-    // Check if node_modules exists (basic dependency check)
-    if (fs.existsSync('node_modules')) {
-        console.log('✅ Dependencies appear to be installed');
-        
-        // Try TypeScript build if possible
-        try {
-            execSync('pnpm build', { stdio: 'ignore' });
-            checkError(!fs.existsSync('packages/mcp-server-smart-typer/dist'), 'TypeScript build produces dist folder');
-        } catch (buildError) {
-            console.log('⚠️  TypeScript build test skipped (dependencies may need installation)');
-        }
-    } else {
-        console.log('⚠️  Dependencies not installed, skipping build tests');
-        console.log('   Run "pnpm install" to enable full validation');
-    }
-    
-    // Check if Python can generate protobufs (basic check)
-    try {
-        execSync('python -c "import grpc_tools.protoc"', { stdio: 'ignore' });
-        console.log('✅ Python gRPC tools available');
-    } catch (pythonError) {
-        console.log('⚠️  Python gRPC tools not available, protobuf generation may fail');
-    }
-    
-} catch (error) {
-    console.log('⚠️  Build environment checks skipped (tools not available)');
-}
-console.log('');
-
-// 5. Check GitHub Actions workflow
-console.log('⚙️  GitHub Actions Configuration');
-const workflowContent = fs.readFileSync('.github/workflows/ci.yml', 'utf8');
-checkError(!workflowContent.includes('publish-npm'), 'npm publishing job configured');
-checkError(!workflowContent.includes('build-python-executable'), 'Python build job configured');
-checkError(!workflowContent.includes('create-release'), 'Release creation job configured');
-checkError(!workflowContent.includes('NODE_AUTH_TOKEN'), 'npm authentication configured');
-console.log('');
-
-// 6. Check MCP compliance
-console.log('🔗 MCP Specification Compliance');
-checkError(serverPackage.name !== '@mcp-smart-typer/server', 'Package name follows MCP conventions (current name is fine for development)');
-checkError(!serverPackage.description.toLowerCase().includes('mcp'), 'Package description mentions MCP');
-checkError(!serverPackage.repository, 'Repository URL configured');
-console.log('');
-
-// 7. Version consistency check
-console.log('📊 Version Consistency');
-const pythonContent = fs.readFileSync('packages/native-helpers/pyproject.toml', 'utf8');
-const pythonVersionMatch = pythonContent.match(/version = "([^"]+)"/);
-const pythonVersion = pythonVersionMatch ? pythonVersionMatch[1] : null;
-
-console.log(`Root package version: ${rootPackage.version}`);
-console.log(`Server package version: ${serverPackage.version}`);
-console.log(`Python package version: ${pythonVersion}`);
-
-const versionsMatch = rootPackage.version === serverPackage.version && 
-                     serverPackage.version === pythonVersion;
-checkError(!versionsMatch, 'All package versions are synchronized');
-console.log('');
-
-// 8. Security considerations
-console.log('🔒 Security Configuration');
-checkError(!workflowContent.includes('secrets.NPM_TOKEN'), 'npm token secret referenced');
-checkError(!workflowContent.includes('secrets.GITHUB_TOKEN'), 'GitHub token secret referenced');
-checkError(!workflowContent.includes('NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}'), 'Secrets properly scoped to publishing steps only');
-console.log('');
-
-// Summary
-console.log('📋 Validation Summary');
-if (hasErrors) {
-    console.log('❌ Validation failed! Please fix the issues above before proceeding.');
-    console.log('\nNext steps:');
-    console.log('1. Fix the reported issues');
-    console.log('2. Run this script again to verify fixes');
-    console.log('3. Once all checks pass, proceed with release preparation');
-    process.exit(1);
-} else {
-    console.log('✅ All validations passed! CI/CD pipeline is ready to use.');
-    console.log('\nNext steps:');
-    console.log('1. Ensure GitHub Secrets are configured:');
-    console.log('   - NPM_TOKEN: Your npm publishing token');
-    console.log('2. Test the pipeline:');
-    console.log('   - npm run prepare-release 2.0.1');
-    console.log('   - git add -A && git commit -m "chore: prepare release v2.0.1"');
-    console.log('   - git tag v2.0.1 && git push origin v2.0.1');
-    console.log('3. Monitor the GitHub Actions workflow execution');
+function assert(condition, message) {
+  if (!condition) failures.push(message);
 }
 
-console.log('\n🎉 CI/CD validation complete!');
+function readJson(file) {
+  const text = requireFile(file);
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    failures.push(`invalid JSON in ${file}: ${error.message}`);
+    return {};
+  }
+}
+
+const rootPackage = readJson('package.json');
+const serverPackage = readJson('packages/mcp-server-smart-typer/package.json');
+const pyproject = requireFile('packages/native-helpers/pyproject.toml');
+const ci = requireFile('.github/workflows/ci.yml');
+const candidate = requireFile('.github/workflows/release-candidate.yml');
+
+const expectedRepository = 'github.com/zheke32174/mcp-smart-typer';
+const forbiddenProvenance = [
+  '@modelcontextprotocol/server-smart-typer',
+  'github.com/modelcontextprotocol/server-smart-typer',
+  'github.com/mcp-smart-typer/mcp-smart-typer',
+  'team@mcp-smart-typer.dev',
+];
+const inspected = [
+  JSON.stringify(serverPackage),
+  pyproject,
+  ci,
+  candidate,
+].join('\n').toLowerCase();
+
+assert(serverPackage.name === '@mcp-smart-typer/server', 'npm package name must remain @mcp-smart-typer/server');
+assert(
+  String(serverPackage.repository?.url || '').toLowerCase().includes(expectedRepository),
+  'npm repository URL must identify Zheke32174/mcp-smart-typer'
+);
+assert(
+  String(serverPackage.bugs?.url || '').toLowerCase().includes(expectedRepository),
+  'npm issue URL must identify Zheke32174/mcp-smart-typer'
+);
+assert(
+  String(serverPackage.homepage || '').toLowerCase().includes(expectedRepository),
+  'npm homepage must identify Zheke32174/mcp-smart-typer'
+);
+assert(
+  pyproject.toLowerCase().includes('github.com/zheke32174/mcp-smart-typer'),
+  'Python project URLs must identify Zheke32174/mcp-smart-typer'
+);
+for (const value of forbiddenProvenance) {
+  assert(!inspected.includes(value.toLowerCase()), `forbidden false provenance remains: ${value}`);
+}
+
+const pythonVersionMatch = pyproject.match(/^version = "([^"]+)"$/m);
+assert(Boolean(pythonVersionMatch), 'Python package version is missing');
+const versions = [rootPackage.version, serverPackage.version, pythonVersionMatch?.[1]];
+assert(versions.every((value) => value === versions[0]), `package versions differ: ${versions.join(', ')}`);
+
+assert(ci.includes('permissions:\n  contents: read'), 'ordinary CI must have read-only contents permission');
+assert(!ci.includes('publish-npm'), 'ordinary CI must not contain an npm publication job');
+assert(!ci.includes('npm publish'), 'ordinary CI must not publish npm packages');
+assert(!ci.includes('NODE_AUTH_TOKEN'), 'ordinary CI must not receive an npm token');
+assert(!ci.includes('secrets.NPM_TOKEN'), 'ordinary CI must not reference an npm token secret');
+assert(!ci.includes('action-gh-release'), 'ordinary CI must not create GitHub releases');
+assert(!ci.includes("tags:\n      - 'v*'"), 'ordinary CI must not run as the release-tag workflow');
+assert(ci.includes('python -m pytest -xvs .'), 'ordinary CI must run Python tests directly');
+assert(!ci.includes('|| echo'), 'ordinary CI must not mask command failures');
+assert(ci.includes('if-no-files-found: error'), 'candidate artifact upload must fail when output is missing');
+
+assert(candidate.includes("tags:\n      - 'v*'"), 'candidate construction must be restricted to immutable version tags');
+assert(candidate.includes("os.environ['GITHUB_REF_NAME'] != f'v{version}'"), 'candidate workflow must bind tag to package version');
+assert(candidate.includes("'source_commit': os.environ['GITHUB_SHA']"), 'candidate receipt must bind the exact source commit');
+assert(candidate.includes("'publication_authority': 'none'"), 'candidate receipt must state that it has no publication authority');
+assert(!candidate.includes('npm publish'), 'candidate workflow must not publish npm packages');
+assert(!candidate.includes('action-gh-release'), 'candidate workflow must not create a GitHub release');
+assert(!candidate.includes('secrets.NPM_TOKEN'), 'candidate workflow must not receive npm credentials');
+assert(candidate.includes('SHA256SUMS.txt'), 'candidate workflow must emit checksums');
+assert(candidate.includes('BUILD-RECEIPT.json'), 'candidate workflow must emit a build receipt');
+
+const pinnedCheckout = 'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5';
+assert(ci.includes(pinnedCheckout), 'ordinary CI checkout action must be commit-pinned');
+assert(candidate.includes(pinnedCheckout), 'candidate checkout action must be commit-pinned');
+
+if (failures.length) {
+  console.error('Release-boundary validation failed:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  process.exit(1);
+}
+
+console.log('PASS: repository identity, fail-closed tests, read-only CI, and candidate-only tag workflow');
