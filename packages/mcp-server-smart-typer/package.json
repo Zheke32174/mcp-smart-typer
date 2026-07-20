@@ -6,8 +6,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "mcp-server-smart-typer": "dist/index.js"
+    "mcp-server-smart-typer": "dist/index.js",
+    "mcp-uia-server": "bin/mcp-uia-server.exe"
   },
+  "files": [
+    "dist/**/*",
+    "bin/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx --watch src/simple-server.ts",
@@ -70,8 +77,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mcp-smart-typer/mcp-smart-typer.git",
+    "url": "https://github.com/Zheke32174/mcp-smart-typer.git",
     "directory": "packages/mcp-server-smart-typer"
   },
+  "bugs": {
+    "url": "https://github.com/Zheke32174/mcp-smart-typer/issues"
+  },
+  "homepage": "https://github.com/Zheke32174/mcp-smart-typer#readme",
   "mcpSpecVersion": "1.0.0"
 }
