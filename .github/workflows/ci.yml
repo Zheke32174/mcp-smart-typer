@@ -82,11 +82,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          cache-dependency-path: packages/native-helpers/requirements.txt
-      - name: Install dependencies
+          cache-dependency-path: packages/native-helpers/pyproject.toml
+      - name: Install owned package and test tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -e .
           python -m pip install black isort mypy pytest
       - name: Prepare generated Python package
         run: >-
@@ -119,12 +119,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: packages/native-helpers/requirements.txt
-      - name: Install build dependencies
+          cache-dependency-path: packages/native-helpers/pyproject.toml
+      - name: Install owned package build dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install pyinstaller
+          python -m pip install .
       - name: Prepare generated Python package
         run: >-
           python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
