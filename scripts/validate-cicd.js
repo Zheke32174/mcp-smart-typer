@@ -9,7 +9,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 const failures = [];
 
@@ -49,12 +48,9 @@ const forbiddenProvenance = [
   'github.com/mcp-smart-typer/mcp-smart-typer',
   'team@mcp-smart-typer.dev',
 ];
-const inspected = [
-  JSON.stringify(serverPackage),
-  pyproject,
-  ci,
-  candidate,
-].join('\n').toLowerCase();
+const inspected = [JSON.stringify(serverPackage), pyproject, ci, candidate]
+  .join('\n')
+  .toLowerCase();
 
 assert(serverPackage.name === '@mcp-smart-typer/server', 'npm package name must remain @mcp-smart-typer/server');
 assert(
@@ -103,9 +99,26 @@ assert(!candidate.includes('secrets.NPM_TOKEN'), 'candidate workflow must not re
 assert(candidate.includes('SHA256SUMS.txt'), 'candidate workflow must emit checksums');
 assert(candidate.includes('BUILD-RECEIPT.json'), 'candidate workflow must emit a build receipt');
 
-const pinnedCheckout = 'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5';
-assert(ci.includes(pinnedCheckout), 'ordinary CI checkout action must be commit-pinned');
-assert(candidate.includes(pinnedCheckout), 'candidate checkout action must be commit-pinned');
+const pinnedActions = [
+  'actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5',
+  'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+  'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065',
+  'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+];
+for (const action of pinnedActions) {
+  assert(ci.includes(action) || candidate.includes(action), `required pinned action is missing: ${action}`);
+}
+assert(
+  candidate.includes('actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093'),
+  'candidate download action must be commit-pinned'
+);
+for (const workflow of [ci, candidate]) {
+  assert(!/uses:\s+actions\/[A-Za-z0-9_.-]+@v\d+/m.test(workflow), 'moving actions/* major-version tag remains');
+  const actionReferences = [...workflow.matchAll(/uses:\s+(actions\/[A-Za-z0-9_.-]+)@([^\s]+)/g)];
+  for (const [, name, revision] of actionReferences) {
+    assert(/^[0-9a-f]{40}$/.test(revision), `${name} is not pinned to a lowercase 40-character commit`);
+  }
+}
 
 if (failures.length) {
   console.error('Release-boundary validation failed:');
@@ -113,4 +126,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('PASS: repository identity, fail-closed tests, read-only CI, and candidate-only tag workflow');
+console.log('PASS: repository identity, fail-closed tests, read-only CI, pinned actions, and candidate-only tag workflow');
