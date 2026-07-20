@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Validate repository-owned release policy
-        run: node scripts/validate-cicd.js
+        run: node scripts/validate-release-boundary.js
 
   test-node:
     runs-on: windows-2022
@@ -40,7 +40,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install pnpm
         shell: pwsh
         run: npm install --global pnpm@${{ env.PNPM_VERSION }}
