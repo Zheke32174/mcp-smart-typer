@@ -16,7 +16,7 @@ concurrency:
 env:
   NODE_VERSION: '20.x'
   PYTHON_VERSION: '3.11'
-  PNPM_VERSION: '8.15.0'
+  NPM_VERSION: '10.8.2'
 
 jobs:
   policy:
@@ -40,19 +40,20 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install pnpm
-        shell: pwsh
-        run: npm install --global pnpm@${{ env.PNPM_VERSION }}
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install exact npm
+        run: npm install --global npm@${{ env.NPM_VERSION }}
+      - name: Install locked dependencies
+        run: npm ci
       - name: Lint
-        run: pnpm lint
+        run: npm run lint
       - name: Type check
-        run: pnpm typecheck
+        run: npm run typecheck
       - name: Build
-        run: pnpm build
+        run: npm run build
       - name: Test
-        run: pnpm test
+        run: npm test
       - name: Upload TypeScript candidate
         if: matrix.node-version == '20.x'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
