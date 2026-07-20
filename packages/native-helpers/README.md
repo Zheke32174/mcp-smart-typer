@@ -16,8 +16,10 @@ The MCP Smart Typer Native Helpers package provides a bridge between Node.js and
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10–3.12
 - Windows for the UI Automation runtime
+- A Playwright browser installation only when browser-automation features are used
+- A system Tesseract executable only when OCR features are used
 
 `pyproject.toml` is the authoritative package and dependency declaration. `requirements.txt` is retained only as a compatibility mirror and must remain synchronized with it.
 
@@ -62,8 +64,8 @@ python -m src.main
 - **mypy**: type-check the owned source tree
 
 ```bash
-python -m black .
-python -m isort .
+python -m black src test_*.py
+python -m isort src test_*.py
 python -m mypy src/ --ignore-missing-imports
 ```
 
