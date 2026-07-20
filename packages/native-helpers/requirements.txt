@@ -12,4 +12,5 @@ opencv-python>=4.8.0
 numpy>=1.24.0
 pywinauto>=0.6.8
 uiautomation>=2.0.18
+lxml>=5.0.0
 PyInstaller>=6.0.0
