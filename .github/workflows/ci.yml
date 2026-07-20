@@ -2,311 +2,321 @@ name: CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ['v*']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-typer-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '20.x'
   PYTHON_VERSION: '3.11'
   PNPM_VERSION: '8.15.0'
+  PACKAGE_NAME: '@mcp-smart-typer/server'
+  PACKAGE_REPOSITORY: 'https://github.com/Zheke32174/mcp-smart-typer.git'
 
 jobs:
   test-node:
     runs-on: windows-latest
-    
     strategy:
       matrix:
         node-version: [18.x, 20.x]
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-        registry-url: 'https://registry.npmjs.org'
-    
-    - name: Install pnpm
-      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-    
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    
-    - name: Lint
-      run: pnpm lint
-    
-    - name: Type check
-      run: pnpm typecheck
-    
-    - name: Build
-      run: pnpm build
-    
-    - name: Test
-      run: pnpm test
-    
-    # Upload build artifacts for publishing job
-    - name: Upload TypeScript build artifacts
-      if: matrix.node-version == '20.x'
-      uses: actions/upload-artifact@v4
-      with:
-        name: typescript-build
-        path: |
-          packages/mcp-server-smart-typer/dist/
-          packages/mcp-server-smart-typer/package.json
-          packages/mcp-server-smart-typer/README.md
-          packages/mcp-server-smart-typer/LICENSE
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install pnpm
+        run: npm install --global pnpm@${{ env.PNPM_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Verify owned package identity
+        if: matrix.node-version == '20.x'
+        shell: pwsh
+        working-directory: packages/mcp-server-smart-typer
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          if ($package.name -ne $env:PACKAGE_NAME) {
+            throw "Unexpected package name: $($package.name)"
+          }
+          if ($package.repository.url -ne $env:PACKAGE_REPOSITORY) {
+            throw "Unexpected repository URL: $($package.repository.url)"
+          }
+          if ($package.version -notmatch '^\d+\.\d+\.\d+([+-][0-9A-Za-z.-]+)?$') {
+            throw "Package version is not semver-shaped: $($package.version)"
+          }
+
+      - name: Upload TypeScript build artifacts
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-build
+          if-no-files-found: error
+          path: |
+            packages/mcp-server-smart-typer/dist/
+            packages/mcp-server-smart-typer/package.json
+            packages/mcp-server-smart-typer/README.md
+            packages/mcp-server-smart-typer/LICENSE
 
   test-python:
     runs-on: windows-latest
-    
     strategy:
       matrix:
         python-version: [3.8, 3.9, '3.10', '3.11', '3.12']
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
-      working-directory: ./packages/native-helpers
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install black isort mypy pytest
-    
-    - name: Generate protobuf files
-      working-directory: ./packages/native-helpers
-      run: |
-        python -m grpc_tools.protoc -I ./proto --python_out=./src/generated --grpc_python_out=./src/generated ./proto/ui_automation.proto
-    
-    - name: Format check with black
-      working-directory: ./packages/native-helpers
-      run: black --check .
-    
-    - name: Import sort check
-      working-directory: ./packages/native-helpers  
-      run: isort --check-only .
-    
-    - name: Type check with mypy
-      working-directory: ./packages/native-helpers
-      run: mypy src/ --ignore-missing-imports
-    
-    - name: Run Python tests
-      working-directory: ./packages/native-helpers
-      run: |
-        python -m pytest -xvs . || echo "No tests found, continuing..."
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: packages/native-helpers/requirements.txt
+
+      - name: Install dependencies
+        working-directory: packages/native-helpers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install black isort mypy pytest
+
+      - name: Generate protobuf files
+        working-directory: packages/native-helpers
+        run: >-
+          python -m grpc_tools.protoc -I ./proto --python_out=./src/generated
+          --grpc_python_out=./src/generated ./proto/ui_automation.proto
+
+      - name: Format check with black
+        working-directory: packages/native-helpers
+        run: python -m black --check .
+
+      - name: Import sort check
+        working-directory: packages/native-helpers
+        run: python -m isort --check-only .
+
+      - name: Type check with mypy
+        working-directory: packages/native-helpers
+        run: python -m mypy src/ --ignore-missing-imports
+
+      - name: Run Python tests
+        working-directory: packages/native-helpers
+        run: python -m pytest -xvs .
 
   build-python-executable:
     runs-on: windows-latest
     needs: test-python
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install build dependencies
-      working-directory: ./packages/native-helpers
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
-    
-    - name: Generate protobuf files
-      working-directory: ./packages/native-helpers
-      run: |
-        python -m grpc_tools.protoc -I ./proto --python_out=./src/generated --grpc_python_out=./src/generated ./proto/ui_automation.proto
-    
-    - name: Build Python executable
-      working-directory: ./packages/native-helpers
-      run: |
-        pyinstaller build_uia_server.spec --clean --noconfirm
-    
-    - name: Test executable
-      working-directory: ./packages/native-helpers
-      run: |
-        if (Test-Path "dist\mcp-uia-server.exe") {
-          Write-Host "✅ Executable built successfully"
-          Get-Item "dist\mcp-uia-server.exe" | Select-Object Name, Length, LastWriteTime
-        } else {
-          Write-Error "❌ Executable not found"
-          exit 1
-        }
-    
-    - name: Upload Python executable
-      uses: actions/upload-artifact@v4
-      with:
-        name: python-executable
-        path: packages/native-helpers/dist/mcp-uia-server.exe
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: packages/native-helpers/requirements.txt
+
+      - name: Install build dependencies
+        working-directory: packages/native-helpers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Generate protobuf files
+        working-directory: packages/native-helpers
+        run: >-
+          python -m grpc_tools.protoc -I ./proto --python_out=./src/generated
+          --grpc_python_out=./src/generated ./proto/ui_automation.proto
+
+      - name: Build Python executable
+        working-directory: packages/native-helpers
+        run: pyinstaller build_uia_server.spec --clean --noconfirm
+
+      - name: Verify executable
+        working-directory: packages/native-helpers
+        shell: pwsh
+        run: |
+          $path = 'dist/mcp-uia-server.exe'
+          if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw 'Executable was not produced'
+          }
+          if ((Get-Item -LiteralPath $path).Length -le 0) {
+            throw 'Executable is empty'
+          }
+
+      - name: Upload Python executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-executable
+          if-no-files-found: error
+          path: packages/native-helpers/dist/mcp-uia-server.exe
 
   publish-npm:
     runs-on: windows-latest
     needs: [test-node, build-python-executable]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
-    
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js ${{ env.NODE_VERSION }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        registry-url: 'https://registry.npmjs.org'
-    
-    - name: Install pnpm
-      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: typescript-build
-        path: packages/mcp-server-smart-typer/
-    
-    - name: Download Python executable
-      uses: actions/download-artifact@v4
-      with:
-        name: python-executable
-        path: packages/mcp-server-smart-typer/bin/
-    
-    - name: Update package.json for publishing
-      working-directory: ./packages/mcp-server-smart-typer
-      shell: pwsh
-      run: |
-        $packageJson = Get-Content package.json | ConvertFrom-Json
-        $packageJson.name = "@modelcontextprotocol/server-smart-typer"
-        
-        # Add bin entry for the Python executable
-        if (-not $packageJson.bin) {
-          $packageJson.bin = @{}
-        }
-        $packageJson.bin."mcp-uia-server" = "bin/mcp-uia-server.exe"
-        
-        # Add files array to include the binary
-        $packageJson.files = @(
-          "dist/**/*",
-          "bin/**/*",
-          "README.md",
-          "LICENSE"
-        )
-        
-        # Update repository URL
-        $packageJson.repository.url = "https://github.com/modelcontextprotocol/server-smart-typer.git"
-        
-        $packageJson | ConvertTo-Json -Depth 10 | Set-Content package.json
-    
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
-    
-    - name: Build package
-      working-directory: ./packages/mcp-server-smart-typer
-      run: pnpm build
-    
-    - name: Publish to npm (main branch - beta)
-      if: github.ref == 'refs/heads/main'
-      working-directory: ./packages/mcp-server-smart-typer
-      run: |
-        $version = node -p "require('./package.json').version"
-        $betaVersion = "$version-beta.$(Get-Date -Format 'yyyyMMddHHmmss')"
-        npm version $betaVersion --no-git-tag-version
-        npm publish --tag beta
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-    
-    - name: Publish to npm (tagged release)
-      if: startsWith(github.ref, 'refs/tags/v')
-      working-directory: ./packages/mcp-server-smart-typer
-      run: npm publish
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org
+
+      - name: Download TypeScript build
+        uses: actions/download-artifact@v4
+        with:
+          name: typescript-build
+          path: packages/mcp-server-smart-typer
+
+      - name: Download native helper
+        uses: actions/download-artifact@v4
+        with:
+          name: python-executable
+          path: packages/mcp-server-smart-typer/bin
+
+      - name: Validate tag and build immutable package
+        id: pack
+        shell: pwsh
+        working-directory: packages/mcp-server-smart-typer
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $expectedTag = "v$($package.version)"
+          if ('${{ github.ref_name }}' -ne $expectedTag) {
+            throw "Tag ${{ github.ref_name }} does not match package version $expectedTag"
+          }
+          if ($package.name -ne $env:PACKAGE_NAME) {
+            throw "Refusing to publish unexpected package name $($package.name)"
+          }
+          if ($package.repository.url -ne $env:PACKAGE_REPOSITORY) {
+            throw "Refusing to publish unexpected repository URL $($package.repository.url)"
+          }
+          if (-not (Test-Path -LiteralPath 'bin/mcp-uia-server.exe' -PathType Leaf)) {
+            throw 'Native helper is missing from the package stage'
+          }
+
+          $pack = npm pack --json | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or $pack.Count -ne 1) {
+            throw 'npm pack did not produce exactly one tarball'
+          }
+          $tarball = $pack[0].filename
+          $sha256 = (Get-FileHash -LiteralPath $tarball -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha256  $tarball" | Set-Content -Encoding utf8NoBOM SHA256SUMS.txt
+
+          $receipt = [ordered]@{
+            schema = 'mcp-smart-typer.release-receipt/v1'
+            source_commit = '${{ github.sha }}'
+            source_tag = '${{ github.ref_name }}'
+            package_name = $package.name
+            package_version = $package.version
+            repository_url = $package.repository.url
+            tarball = $tarball
+            sha256 = $sha256
+            node_version = (node --version).Trim()
+            npm_version = (npm --version).Trim()
+          }
+          $receipt | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8NoBOM release-receipt.json
+          "tarball=$tarball" >> $env:GITHUB_OUTPUT
+
+      - name: Publish exact tarball to npm
+        working-directory: packages/mcp-server-smart-typer
+        run: npm publish '${{ steps.pack.outputs.tarball }}' --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload release package and receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          if-no-files-found: error
+          path: |
+            packages/mcp-server-smart-typer/${{ steps.pack.outputs.tarball }}
+            packages/mcp-server-smart-typer/SHA256SUMS.txt
+            packages/mcp-server-smart-typer/release-receipt.json
+            packages/mcp-server-smart-typer/bin/mcp-uia-server.exe
 
   create-release:
-    runs-on: windows-latest
-    needs: [publish-npm]
-    if: startsWith(github.ref, 'refs/tags/v')
-    
+    runs-on: ubuntu-24.04
+    needs: publish-npm
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Download Python executable
-      uses: actions/download-artifact@v4
-      with:
-        name: python-executable
-        path: ./release-assets/
-    
-    - name: Generate release notes
-      id: release-notes
-      shell: pwsh
-      run: |
-        $version = "${{ github.ref_name }}"
-        $previousTag = git describe --tags --abbrev=0 $version^ 2>$null
-        
-        if ($previousTag) {
-          $commits = git log --pretty=format:"- %s" $previousTag..$version
-        } else {
-          $commits = git log --pretty=format:"- %s" $version
-        }
-        
-        $releaseNotes = @"
-        ## MCP Smart Typer $version
-        
-        ### Features
-        - Windows UI Automation via gRPC
-        - Smart field detection and typing
-        - OCR-based form field analysis
-        - MCP (Model Context Protocol) compatible server
-        
-        ### Changes in this release
-        $commits
-        
-        ### Installation
-        
-        #### Via npm:
-        ```bash
-        npm install -g @modelcontextprotocol/server-smart-typer
-        ```
-        
-        #### Standalone executable:
-        Download `mcp-uia-server.exe` from the assets below.
-        
-        ### MCP Specification Compliance
-        This server implements MCP specification version 1.0 and provides:
-        - Resource discovery and management
-        - Tool execution with proper error handling
-        - Secure UI automation with permission controls
-        - Structured logging and audit trails
-        
-        ### System Requirements
-        - Windows 10/11
-        - Node.js 18+ (for npm package)
-        - .NET Framework 4.7.2+ (for executable)
-        "@
-        
-        # Save to file and environment
-        $releaseNotes | Out-File -Encoding utf8 "release-notes.md"
-        "RELEASE_NOTES=$releaseNotes" | Out-File -Append $env:GITHUB_ENV
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: MCP Smart Typer ${{ github.ref_name }}
-        body_path: release-notes.md
-        files: |
-          release-assets/mcp-uia-server.exe
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: release-assets
+
+      - name: Write factual release notes
+        run: |
+          cat > release-notes.md <<'EOF'
+          ## MCP Smart Typer ${{ github.ref_name }}
+
+          This release was built from commit `${{ github.sha }}` after the Node and Python validation jobs completed successfully.
+
+          ### Install
+
+          ```bash
+          npm install --global @mcp-smart-typer/server@${{ github.ref_name }}
+          ```
+
+          Verify the attached npm tarball and native helper against `SHA256SUMS.txt` and `release-receipt.json` before use.
+          EOF
+
+      - name: Refuse release identity overwrite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view '${{ github.ref_name }}' >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to edit immutable release identity.' >&2
+            exit 1
+          fi
+
+      - name: Create immutable GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create '${{ github.ref_name }}'
+          release-assets/*
+          --verify-tag
+          --title 'MCP Smart Typer ${{ github.ref_name }}'
+          --notes-file release-notes.md
