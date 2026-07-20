@@ -24,7 +24,12 @@ dependencies = [
     "numpy>=1.24.0",
     "pywinauto>=0.6.8",
     "uiautomation>=2.0.18",
+    "pywin32>=306; platform_system == 'Windows'",
+    "playwright>=1.40.0",
     "lxml>=5.0.0",
+    "pytesseract>=0.3.10",
+    "psutil>=5.9.0",
+    "requests>=2.31.0",
     "PyInstaller>=6.0.0",
 ]
 keywords = ["mcp", "ui-automation", "windows", "grpc", "pyautogui"]
