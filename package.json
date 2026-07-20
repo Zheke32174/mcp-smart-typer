@@ -15,7 +15,7 @@
     "clean": "pnpm -r clean",
     "typecheck": "pnpm -r typecheck",
     "prepare-release": "node scripts/prepare-release.js",
-    "validate-cicd": "node scripts/validate-cicd.js"
+    "validate-cicd": "node scripts/validate-release-boundary.js"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
