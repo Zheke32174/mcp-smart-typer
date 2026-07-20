@@ -1,4 +1,4 @@
-name: Generate npm lock diagnostics
+name: Verify npm lock consistency
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
       - '.github/workflows/npm-lock-diagnostics.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: mcp-smart-typer-lock-${{ github.ref }}
@@ -17,44 +17,22 @@ concurrency:
 
 jobs:
   lock-report:
-    if: >-
-      github.actor != 'github-actions[bot]' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'workflow/verified-publication-v1'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          ref: workflow/verified-publication-v1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '20.x'
       - name: Install exact npm
         run: npm install --global npm@10.8.2
-      - name: Generate lock without lifecycle execution
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Verify the generated lock can drive a clean install
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Capture exact lock patch
-        run: git diff -- package-lock.json > package-lock.patch
-      - name: Upload generated lock and patch
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: npm-lock-${{ github.sha }}
-          path: |
-            package-lock.json
-            package-lock.patch
-          if-no-files-found: error
-          retention-days: 14
-      - name: Commit verified lock to the review branch
+      - name: Prove the committed lock is reproducible
         run: |
           set -euo pipefail
-          if git diff --quiet -- package-lock.json; then
-            echo 'package-lock.json already matches the verified npm 10.8.2 graph'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package-lock.json
-          git commit -m 'build: synchronize npm lock with owned package metadata'
-          git push origin HEAD:workflow/verified-publication-v1
+          cp package-lock.json package-lock.before.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          cmp --silent package-lock.before.json package-lock.json || {
+            echo 'package-lock.json is not synchronized with the committed package metadata' >&2
+            git diff --no-index -- package-lock.before.json package-lock.json || true
+            exit 1
+          }
+          npm ci --ignore-scripts --no-audit --no-fund
