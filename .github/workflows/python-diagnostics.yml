@@ -36,6 +36,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install black isort mypy pytest
+      - name: Prepare generated Python package
+        run: >-
+          python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
       - name: Generate protobuf files
         run: >-
           python -m grpc_tools.protoc
