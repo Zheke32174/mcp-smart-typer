@@ -15,7 +15,7 @@ concurrency:
 env:
   NODE_VERSION: '20.x'
   PYTHON_VERSION: '3.11'
-  PNPM_VERSION: '8.15.0'
+  NPM_VERSION: '10.8.2'
 
 jobs:
   verify-identity:
@@ -59,17 +59,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install pnpm and dependencies
-        shell: pwsh
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install exact npm and locked dependencies
         run: |
-          npm install --global pnpm@${{ env.PNPM_VERSION }}
-          pnpm install --frozen-lockfile
+          npm install --global npm@${{ env.NPM_VERSION }}
+          npm ci
       - name: Verify and build TypeScript package
         run: |
-          pnpm lint
-          pnpm typecheck
-          pnpm test
-          pnpm build
+          npm run lint
+          npm run typecheck
+          npm test
+          npm run build
       - name: Create npm package candidate
         shell: pwsh
         run: |
@@ -156,7 +157,7 @@ jobs:
                   continue
               data = path.read_bytes()
               files.append({'name': path.name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
-          lock = root / 'pnpm-lock.yaml'
+          lock = root / 'package-lock.json'
           receipt = {
               'schema': 'mcp-smart-typer.build-receipt/v1',
               'version': os.environ['VERSION'],
@@ -164,7 +165,7 @@ jobs:
               'source_commit': os.environ['GITHUB_SHA'],
               'repository': 'https://github.com/Zheke32174/mcp-smart-typer',
               'package_name': '@mcp-smart-typer/server',
-              'pnpm_lock_sha256': hashlib.sha256(lock.read_bytes()).hexdigest() if lock.exists() else None,
+              'package_lock_sha256': hashlib.sha256(lock.read_bytes()).hexdigest(),
               'runner_os': platform.platform(),
               'artifacts': files,
               'publication_authority': 'none',
