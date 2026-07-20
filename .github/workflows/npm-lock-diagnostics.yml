@@ -1,0 +1,42 @@
+name: Generate npm lock diagnostics
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/*/package.json'
+      - '.github/workflows/npm-lock-diagnostics.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-smart-typer-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lock-report:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.x'
+      - name: Install exact npm
+        run: npm install --global npm@10.8.2
+      - name: Generate lock without lifecycle execution
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify the generated lock can drive a clean install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Capture exact lock patch
+        run: git diff -- package-lock.json > package-lock.patch
+      - name: Upload generated lock and patch
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: npm-lock-${{ github.sha }}
+          path: |
+            package-lock.json
+            package-lock.patch
+          if-no-files-found: error
+          retention-days: 14
