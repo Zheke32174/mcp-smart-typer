@@ -7,7 +7,7 @@ name = "mcp-smart-typer-native-helpers"
 version = "2.0.0"
 description = "Python gRPC service for Windows UI automation"
 authors = [
-    {name = "MCP Smart Typer Team", email = "team@mcp-smart-typer.dev"}
+    {name = "MCP Smart Typer Team"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
@@ -43,9 +43,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mcp-smart-typer/mcp-smart-typer"
-Repository = "https://github.com/mcp-smart-typer/mcp-smart-typer.git"
-Issues = "https://github.com/mcp-smart-typer/mcp-smart-typer/issues"
+Homepage = "https://github.com/Zheke32174/mcp-smart-typer"
+Repository = "https://github.com/Zheke32174/mcp-smart-typer.git"
+Issues = "https://github.com/Zheke32174/mcp-smart-typer/issues"
 
 [project.scripts]
 mcp-native-helpers = "src.main:main"
