@@ -30,11 +30,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: packages/native-helpers/requirements.txt
-      - name: Install diagnostic dependencies
+          cache-dependency-path: packages/native-helpers/pyproject.toml
+      - name: Install owned package and diagnostic tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python -m pip install -e .
           python -m pip install black isort mypy pytest
       - name: Prepare generated Python package
         run: >-
