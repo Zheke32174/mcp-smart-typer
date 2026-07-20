@@ -45,6 +45,18 @@ function canonicalJson(value) {
   return `${JSON.stringify(sort(value))}\n`;
 }
 
+function fsyncDirectoryBestEffort(directory) {
+  let descriptor;
+  try {
+    descriptor = fs.openSync(directory, 'r');
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    if (!['EACCES', 'EINVAL', 'EISDIR', 'ENOTSUP', 'EPERM'].includes(error.code)) throw error;
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+}
+
 function atomicWrite(file, text) {
   const directory = path.dirname(file);
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -69,12 +81,7 @@ function atomicWrite(file, text) {
   }
   fs.closeSync(descriptor);
   fs.renameSync(temporary, file);
-  const directoryDescriptor = fs.openSync(directory, 'r');
-  try {
-    fs.fsyncSync(directoryDescriptor);
-  } finally {
-    fs.closeSync(directoryDescriptor);
-  }
+  fsyncDirectoryBestEffort(directory);
 }
 
 function readJson(relative) {
