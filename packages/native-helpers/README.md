@@ -10,28 +10,40 @@ The MCP Smart Typer Native Helpers package provides a bridge between Node.js and
 
 - **Type Text**: Type strings into the active window
 - **Send Keys**: Simulate key presses including key combinations
-- **Get Active Window**: Retrieve details of the currently active window
+- **Get Active Window**: Retrieve details about the currently active window
 - **Find Element**: Locate UI elements using text, class, or id
 - **Click Element**: Simulate mouse clicks and interactions
 
 ## Requirements
 
 - Python 3.8+
-- Windows operating system for PyAutoGUI-based UI automation
+- Windows for the UI Automation runtime
+
+`pyproject.toml` is the authoritative package and dependency declaration. `requirements.txt` is retained only as a compatibility mirror and must remain synchronized with it.
 
 ## Installation
 
+From `packages/native-helpers`:
+
 ```bash
-pip install -r requirements.txt
+python -m pip install .
+```
+
+For an editable development environment:
+
+```bash
+python -m pip install -e .
+python -m pip install black isort mypy pytest
 ```
 
 ## Development
 
 ### Set up Protobuf
 
-From the root directory, run:
+From `packages/native-helpers`, create the generated package and compile the protocol definition:
 
 ```bash
+python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
 python -m grpc_tools.protoc -I ./proto --python_out=./src/generated --grpc_python_out=./src/generated ./proto/ui_automation.proto
 ```
 
@@ -45,19 +57,19 @@ python -m src.main
 
 ## Code Style
 
-- **Black**: Auto-format code style
-- **isort**: Organize imports
-- **mypy**: Type-checking
+- **Black**: format Python sources
+- **isort**: organize imports
+- **mypy**: type-check the owned source tree
 
 ```bash
-black .
-isort .
-mypy src/
+python -m black .
+python -m isort .
+python -m mypy src/ --ignore-missing-imports
 ```
 
 ### Logging
 
-Enable verbose logging by using the `--verbose` flag when running the server:
+Enable verbose logging with:
 
 ```bash
 python -m src.main --verbose
@@ -65,17 +77,18 @@ python -m src.main --verbose
 
 ## Testing
 
-Unit tests can be implemented with the `unittest` framework or similar and run via:
+Run the repository's Python tests with:
 
 ```bash
-python -m unittest discover -s tests
+python -m pytest -xvs .
 ```
+
+A run that collects no tests is treated as a failure by CI rather than rewritten as success.
 
 ## Contributing
 
-If you wish to contribute, fork the project and submit a pull request or open an issue.
+Submit changes through a review branch and keep package metadata, generated-code instructions, formatting, type checks, tests, and candidate receipts aligned.
 
 ## License
 
-MIT License - see LICENSE file for details.
-
+MIT License - see LICENSE for details.
