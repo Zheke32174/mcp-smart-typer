@@ -1,0 +1,183 @@
+name: Build verified release candidate
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-smart-typer-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20.x'
+  PYTHON_VERSION: '3.11'
+  PNPM_VERSION: '8.15.0'
+
+jobs:
+  verify-identity:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - id: identity
+        name: Verify tag, package versions, and repository identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-cicd.js
+          python3 - <<'PY'
+          import json, pathlib, re, os
+          root = json.loads(pathlib.Path('package.json').read_text(encoding='utf-8'))
+          server = json.loads(pathlib.Path('packages/mcp-server-smart-typer/package.json').read_text(encoding='utf-8'))
+          pyproject = pathlib.Path('packages/native-helpers/pyproject.toml').read_text(encoding='utf-8')
+          match = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
+          if not match:
+              raise SystemExit('Python package version is missing')
+          versions = {root['version'], server['version'], match.group(1)}
+          if len(versions) != 1:
+              raise SystemExit(f'version mismatch: {sorted(versions)}')
+          version = versions.pop()
+          if os.environ['GITHUB_REF_NAME'] != f'v{version}':
+              raise SystemExit(f'tag {os.environ["GITHUB_REF_NAME"]} does not match v{version}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
+              handle.write(f'version={version}\n')
+          PY
+
+  node-candidate:
+    runs-on: windows-2022
+    needs: verify-identity
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install pnpm and dependencies
+        shell: pwsh
+        run: |
+          npm install --global pnpm@${{ env.PNPM_VERSION }}
+          pnpm install --frozen-lockfile
+      - name: Verify and build TypeScript package
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
+      - name: Create npm package candidate
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-node | Out-Null
+          Push-Location packages/mcp-server-smart-typer
+          try {
+            npm pack --pack-destination ../../release-node
+          } finally {
+            Pop-Location
+          }
+          $packages = @(Get-ChildItem -LiteralPath release-node -Filter '*.tgz' -File)
+          if ($packages.Count -ne 1) { throw "expected one npm candidate, found $($packages.Count)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: node-release-candidate-${{ github.sha }}
+          path: release-node/*.tgz
+          if-no-files-found: error
+          retention-days: 30
+
+  python-candidate:
+    runs-on: windows-2022
+    needs: verify-identity
+    defaults:
+      run:
+        working-directory: packages/native-helpers
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: packages/native-helpers/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install black isort mypy pytest pyinstaller
+      - name: Generate protobuf files
+        run: >-
+          python -m grpc_tools.protoc
+          -I ./proto
+          --python_out=./src/generated
+          --grpc_python_out=./src/generated
+          ./proto/ui_automation.proto
+      - name: Verify Python source
+        run: |
+          python -m black --check .
+          python -m isort --check-only .
+          python -m mypy src/ --ignore-missing-imports
+          python -m pytest -xvs .
+      - name: Build executable candidate
+        run: python -m PyInstaller build_uia_server.spec --clean --noconfirm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-release-candidate-${{ github.sha }}
+          path: packages/native-helpers/dist/mcp-uia-server.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  receipt:
+    runs-on: ubuntu-24.04
+    needs: [verify-identity, node-candidate, python-candidate]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release-candidate-${{ github.sha }}'
+          path: release-candidate
+          merge-multiple: true
+      - name: Create checksums and exact-source receipt
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify-identity.outputs.version }}
+        run: |
+          set -euo pipefail
+          find release-candidate -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > release-candidate/SHA256SUMS.txt
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, platform, subprocess
+          root = pathlib.Path('.')
+          candidate = root / 'release-candidate'
+          files = []
+          for path in sorted(candidate.iterdir()):
+              if not path.is_file() or path.name in {'BUILD-RECEIPT.json', 'SHA256SUMS.txt'}:
+                  continue
+              data = path.read_bytes()
+              files.append({'name': path.name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+          lock = root / 'pnpm-lock.yaml'
+          receipt = {
+              'schema': 'mcp-smart-typer.build-receipt/v1',
+              'version': os.environ['VERSION'],
+              'tag': os.environ['GITHUB_REF_NAME'],
+              'source_commit': os.environ['GITHUB_SHA'],
+              'repository': 'https://github.com/Zheke32174/mcp-smart-typer',
+              'package_name': '@mcp-smart-typer/server',
+              'pnpm_lock_sha256': hashlib.sha256(lock.read_bytes()).hexdigest() if lock.exists() else None,
+              'runner_os': platform.platform(),
+              'artifacts': files,
+              'publication_authority': 'none',
+              'notes': 'Candidate artifacts only; this workflow does not publish npm packages or create a GitHub Release.',
+          }
+          (candidate / 'BUILD-RECEIPT.json').write_text(
+              json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n', encoding='utf-8'
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-release-candidate-${{ github.ref_name }}-${{ github.sha }}
+          path: release-candidate/
+          if-no-files-found: error
+          retention-days: 30
