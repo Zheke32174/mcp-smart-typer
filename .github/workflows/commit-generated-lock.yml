@@ -1,0 +1,52 @@
+name: Materialize reviewed npm lock
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/*/package.json'
+      - '.github/workflows/commit-generated-lock.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mcp-smart-typer-lock-materialization-${{ github.head_ref }}
+  cancel-in-progress: false
+
+jobs:
+  materialize:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'workflow/verified-publication-v1'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.x'
+      - name: Generate and verify exact lock without lifecycle execution
+        run: |
+          set -euo pipefail
+          npm install --global npm@10.8.2
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Commit only the generated lock to the PR branch
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json is already exact'
+            exit 0
+          fi
+          test "$(git diff --name-only | sort)" = 'package-lock.json'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package-lock.json
+          git commit -m 'Materialize exact npm workspace lock'
+          git push origin "HEAD:${HEAD_BRANCH}"
