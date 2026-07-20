@@ -9,7 +9,7 @@ on:
       - '.github/workflows/npm-lock-diagnostics.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: mcp-smart-typer-lock-${{ github.ref }}
@@ -17,9 +17,15 @@ concurrency:
 
 jobs:
   lock-report:
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'workflow/verified-publication-v1'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: workflow/verified-publication-v1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '20.x'
@@ -40,3 +46,15 @@ jobs:
             package-lock.patch
           if-no-files-found: error
           retention-days: 14
+      - name: Commit verified lock to the review branch
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json already matches the verified npm 10.8.2 graph'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git commit -m 'build: synchronize npm lock with owned package metadata'
+          git push origin HEAD:workflow/verified-publication-v1
