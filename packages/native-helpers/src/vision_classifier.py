@@ -11,7 +11,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
-import tensorflow as tf
+
+try:
+    import tensorflow as tf
+except ImportError:  # Optional accelerator; rule-based fallback remains available.
+    tf = None
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -48,7 +52,7 @@ class VisionFieldClassifier:
         self.is_loaded = False
         self.input_size = (224, 224)  # Standard input size for vision models
 
-    def _create_cnn_model(self) -> tf.keras.Model:
+    def _create_cnn_model(self) -> Any:
         """Create a simple CNN model for field classification.
 
         Returns:
@@ -82,7 +86,7 @@ class VisionFieldClassifier:
 
         return model
 
-    def _create_vision_transformer(self) -> tf.keras.Model:
+    def _create_vision_transformer(self) -> Any:
         """Create a simplified Vision Transformer model.
 
         Returns:
@@ -129,7 +133,7 @@ class VisionFieldClassifier:
 
         return None
 
-    def _save_model(self, model: tf.keras.Model):
+    def _save_model(self, model: Any):
         """Save model to cache directory.
 
         Args:
@@ -149,6 +153,12 @@ class VisionFieldClassifier:
             use_pretrained: Whether to use pre-trained weights
         """
         if self.is_loaded:
+            return
+
+        if tf is None:
+            logger.info("TensorFlow unavailable; using rule-based field classification")
+            self.model = None
+            self.is_loaded = False
             return
 
         try:
