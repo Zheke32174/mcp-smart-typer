@@ -14,13 +14,9 @@ import { logger } from './utils/logger.js';
 import { generateAsyncJobId } from './utils/job-manager.js';
 import {
   detectFieldsRequest,
-  detectFieldsResponse,
   typeTextRequest,
-  typeTextResponse,
   getFieldValueRequest,
-  getFieldValueResponse,
   focusFieldRequest,
-  focusFieldResponse,
   DetectFieldsResponse,
   TypeTextResponse,
   GetFieldValueResponse,
