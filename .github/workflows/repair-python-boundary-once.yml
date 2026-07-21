@@ -1,8 +1,8 @@
 name: Repair Python boundary once
 
 on:
-  push:
-    branches: [workflow/verified-publication-v1]
+  pull_request:
+    branches: [main]
     paths:
       - '.github/workflows/repair-python-boundary-once.yml'
 
@@ -15,6 +15,9 @@ concurrency:
 
 jobs:
   repair:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'workflow/verified-publication-v1'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
