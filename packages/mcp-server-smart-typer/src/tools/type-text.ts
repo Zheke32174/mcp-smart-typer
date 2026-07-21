@@ -5,11 +5,11 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { 
-  typeTextRequest, 
+import {
+  typeTextRequest,
   typeTextResponse,
   TypeTextRequest,
-  TypeTextResponse 
+  TypeTextResponse,
 } from '../schemas/index.js';
 import { logger } from '../utils/logger.js';
 import { generateAsyncJobId } from '../utils/job-manager.js';
@@ -32,7 +32,7 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
       // Validate input with Zod
       const params = typeTextRequest.parse(request.params.arguments);
       asyncJobId = generateAsyncJobId();
-      
+
       // === PERMISSION CHECK ===
       try {
         permissionManager.validateTypingPermission({
@@ -40,19 +40,27 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           toolName: 'type_text',
           fieldId: params.fieldId,
           securityFlags: params.securityFlags,
-          mcpRootPermission: params.securityFlags?.includes('mcp_root_permission')
+          mcpRootPermission: params.securityFlags?.includes('mcp_root_permission'),
         });
-        
+
         getAuditLogger().logPermissionCheck('type_text', true, 'Permission granted');
       } catch (permissionError) {
-        getAuditLogger().logPermissionCheck('type_text', false, permissionError instanceof Error ? permissionError.message : String(permissionError));
+        getAuditLogger().logPermissionCheck(
+          'type_text',
+          false,
+          permissionError instanceof Error ? permissionError.message : String(permissionError)
+        );
         throw permissionError;
       }
 
       // === SECURITY VALIDATION ===
       const securityValidation = securityManager.validateSecurityFlags(params.securityFlags);
-      getAuditLogger().logSecurityValidation('type_text', securityValidation.isValid, securityValidation.warnings);
-      
+      getAuditLogger().logSecurityValidation(
+        'type_text',
+        securityValidation.isValid,
+        securityValidation.warnings
+      );
+
       if (!securityValidation.isValid) {
         throw new Error(`Security validation failed: ${securityValidation.warnings.join(', ')}`);
       }
@@ -60,19 +68,19 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
       // Detect sensitive field
       const sensitiveField = securityManager.detectSensitiveField(params.fieldId);
       const isPasswordField = securityManager.isPasswordField(params.fieldId);
-      
+
       // Create secure log entry
       const secureLogEntry = securityManager.createSecureLogEntry('info', 'Typing text to field', {
         fieldId: params.fieldId,
         textLength: params.text.length,
         options: params.options,
         sensitiveField: sensitiveField?.fieldType,
-        isPasswordField
+        isPasswordField,
       });
-      
+
       logger.secureLog('info', secureLogEntry.message, secureLogEntry.data, {
         fieldId: params.fieldId,
-        hasSensitiveData: secureLogEntry.hasSensitiveData
+        hasSensitiveData: secureLogEntry.hasSensitiveData,
       });
 
       // === ROLLBACK EXECUTION ===
@@ -82,15 +90,15 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
         async () => {
           // Handle simulation mode
           if (params.options?.simulate) {
-            logger.info('Simulating text typing (no actual input)', { 
-              fieldId: params.fieldId, 
-              asyncJobId 
+            logger.info('Simulating text typing (no actual input)', {
+              fieldId: params.fieldId,
+              asyncJobId,
             });
-            
+
             return {
               success: true,
               charactersTyped: params.text.length,
-              timeTaken: Math.min(params.text.length * (params.options?.delay || 50), 1000)
+              timeTaken: Math.min(params.text.length * (params.options?.delay || 50), 1000),
             };
           }
 
@@ -106,7 +114,7 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
         undefined, // No custom rollback executor
         {
           dryRun: params.options?.simulate || rollbackManager.isDryRunMode(),
-          captureOriginalValue: !isPasswordField // Don't capture password field values
+          captureOriginalValue: !isPasswordField, // Don't capture password field values
         }
       );
 
@@ -120,7 +128,9 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           timeTaken: rollbackResult.dryRunResult.estimatedTime,
           asyncJobId,
           errorCode: rollbackResult.dryRunResult.wouldSucceed ? undefined : 'DRY_RUN_FAILED',
-          errorMessage: rollbackResult.dryRunResult.wouldSucceed ? undefined : `Dry-run warnings: ${rollbackResult.dryRunResult.warnings.join(', ')}`
+          errorMessage: rollbackResult.dryRunResult.wouldSucceed
+            ? undefined
+            : `Dry-run warnings: ${rollbackResult.dryRunResult.warnings.join(', ')}`,
         };
 
         // Log dry-run result
@@ -131,7 +141,7 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
             isDryRun: true,
             predictedChanges: rollbackResult.dryRunResult.predictedChanges,
             warnings: rollbackResult.dryRunResult.warnings,
-            estimatedTime: rollbackResult.dryRunResult.estimatedTime
+            estimatedTime: rollbackResult.dryRunResult.estimatedTime,
           },
           rollbackResult.dryRunResult.wouldSucceed ? undefined : 'DRY_RUN_FAILED'
         );
@@ -140,10 +150,14 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           content: [
             {
               type: 'text',
-              text: JSON.stringify({
-                ...dryRunResponse,
-                dryRunResult: rollbackResult.dryRunResult
-              }, null, 2),
+              text: JSON.stringify(
+                {
+                  ...dryRunResponse,
+                  dryRunResult: rollbackResult.dryRunResult,
+                },
+                null,
+                2
+              ),
             },
           ],
         };
@@ -161,13 +175,13 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
         charactersTyped: result.charactersTyped || params.text.length,
         timeTaken,
         asyncJobId,
-        errorCode: result.success ? undefined : (result.errorCode || 'TYPING_ERROR'),
-        errorMessage: result.success ? undefined : (result.errorMessage || 'Failed to type text'),
+        errorCode: result.success ? undefined : result.errorCode || 'TYPING_ERROR',
+        errorMessage: result.success ? undefined : result.errorMessage || 'Failed to type text',
       };
 
       // Validate response with Zod
       const validatedResponse = typeTextResponse.parse(response);
-      
+
       // Log successful operation
       getAuditLogger().logTypingOperation(
         params.fieldId,
@@ -178,20 +192,25 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           clearFirst: params.options?.clearFirst || false,
           pressEnter: params.options?.pressEnter || false,
           delay: params.options?.delay || 50,
-          hasSensitiveData: secureLogEntry.hasSensitiveData
+          hasSensitiveData: secureLogEntry.hasSensitiveData,
         },
         response.errorCode
       );
-      
-      logger.secureLog('info', 'Text typing completed', {
-        success: response.success,
-        charactersTyped: response.charactersTyped,
-        timeTaken: response.timeTaken,
-        asyncJobId
-      }, {
-        fieldId: params.fieldId,
-        hasSensitiveData: secureLogEntry.hasSensitiveData
-      });
+
+      logger.secureLog(
+        'info',
+        'Text typing completed',
+        {
+          success: response.success,
+          charactersTyped: response.charactersTyped,
+          timeTaken: response.timeTaken,
+          asyncJobId,
+        },
+        {
+          fieldId: params.fieldId,
+          hasSensitiveData: secureLogEntry.hasSensitiveData,
+        }
+      );
 
       return {
         content: [
@@ -201,15 +220,14 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           },
         ],
       };
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const errorCode = error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'TYPING_ERROR';
-      
+
       logger.error('Failed to type text:', error);
-      
+
       const timeTaken = Date.now() - startTime;
-      
+
       // Log failed operation
       if (asyncJobId!) {
         getAuditLogger().logTypingOperation(
@@ -217,12 +235,12 @@ export function registerTypeTextTool(server: McpServer, nativeClient: any) {
           false,
           {
             timeTaken,
-            error: errorMessage
+            error: errorMessage,
           },
           errorCode
         );
       }
-      
+
       // Return error response with proper schema
       const errorResponse: TypeTextResponse = {
         success: false,

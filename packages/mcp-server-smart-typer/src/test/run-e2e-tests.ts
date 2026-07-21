@@ -34,20 +34,20 @@ class E2ETestRunner {
       name: 'Field Detection',
       description: 'Tests field detection precision and accuracy with Playwright sample pages',
       testFile: 'src/test/e2e/field-detection.test.ts',
-      category: 'detection'
+      category: 'detection',
     },
     {
       name: 'Typing Accuracy',
       description: 'Tests typing accuracy and performance across different scenarios',
       testFile: 'src/test/e2e/typing-accuracy.test.ts',
-      category: 'typing'
+      category: 'typing',
     },
     {
       name: 'Notepad Integration',
       description: 'Tests integration with Windows Notepad application',
       testFile: 'src/test/e2e/notepad-integration.test.ts',
-      category: 'integration'
-    }
+      category: 'integration',
+    },
   ];
 
   private results: TestResult[] = [];
@@ -57,7 +57,7 @@ class E2ETestRunner {
   async runAllTests(): Promise<void> {
     console.log('🚀 Starting comprehensive E2E test suite...');
     console.log('================================================');
-    
+
     this.startTime = Date.now();
 
     // Ensure test directories exist
@@ -67,7 +67,7 @@ class E2ETestRunner {
     for (const suite of this.testSuites) {
       console.log(`\n📋 Running ${suite.name} tests...`);
       console.log(`   ${suite.description}`);
-      
+
       try {
         const result = await this.runTestSuite(suite);
         this.results.push(result);
@@ -79,7 +79,7 @@ class E2ETestRunner {
           duration: 0,
           passed: 0,
           failed: 1,
-          skipped: 0
+          skipped: 0,
         });
       }
     }
@@ -88,17 +88,13 @@ class E2ETestRunner {
 
     // Generate reports
     await this.generateReports();
-    
+
     // Display summary
     this.displaySummary();
   }
 
   private setupTestEnvironment(): void {
-    const directories = [
-      './test-screenshots',
-      './test-reports',
-      './coverage'
-    ];
+    const directories = ['./test-screenshots', './test-reports', './coverage'];
 
     directories.forEach(dir => {
       if (!existsSync(dir)) {
@@ -110,34 +106,38 @@ class E2ETestRunner {
   private async runTestSuite(suite: TestSuite): Promise<TestResult> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
-      
-      const jestProcess = spawn('npx', [
-        'jest',
-        suite.testFile,
-        '--verbose',
-        '--coverage',
-        '--json',
-        '--outputFile',
-        `./test-reports/${suite.name.toLowerCase().replace(/\s+/g, '-')}-results.json`
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true
-      });
+
+      const jestProcess = spawn(
+        'npx',
+        [
+          'jest',
+          suite.testFile,
+          '--verbose',
+          '--coverage',
+          '--json',
+          '--outputFile',
+          `./test-reports/${suite.name.toLowerCase().replace(/\s+/g, '-')}-results.json`,
+        ],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: true,
+        }
+      );
 
       let stdout = '';
       let stderr = '';
 
-      jestProcess.stdout?.on('data', (data) => {
+      jestProcess.stdout?.on('data', data => {
         stdout += data.toString();
       });
 
-      jestProcess.stderr?.on('data', (data) => {
+      jestProcess.stderr?.on('data', data => {
         stderr += data.toString();
       });
 
-      jestProcess.on('close', (code) => {
+      jestProcess.on('close', code => {
         const duration = Date.now() - startTime;
-        
+
         try {
           // Parse Jest output to extract results
           const result = this.parseJestOutput(stdout, stderr, suite.name, duration);
@@ -147,16 +147,21 @@ class E2ETestRunner {
         }
       });
 
-      jestProcess.on('error', (error) => {
+      jestProcess.on('error', error => {
         reject(error);
       });
     });
   }
 
-  private parseJestOutput(stdout: string, stderr: string, suiteName: string, duration: number): TestResult {
+  private parseJestOutput(
+    stdout: string,
+    stderr: string,
+    suiteName: string,
+    duration: number
+  ): TestResult {
     // Parse Jest output - this is a simplified parser
     // In real implementation, you'd parse the JSON output more thoroughly
-    
+
     const passedMatch = stdout.match(/(\d+) passing/);
     const failedMatch = stdout.match(/(\d+) failing/);
     const skippedMatch = stdout.match(/(\d+) pending/);
@@ -167,20 +172,22 @@ class E2ETestRunner {
       passed: passedMatch ? parseInt(passedMatch[1]) : 0,
       failed: failedMatch ? parseInt(failedMatch[1]) : 0,
       skipped: skippedMatch ? parseInt(skippedMatch[1]) : 0,
-      coverage: this.extractCoverageInfo(stdout)
+      coverage: this.extractCoverageInfo(stdout),
     };
   }
 
   private extractCoverageInfo(output: string): TestResult['coverage'] {
     // Extract coverage information from Jest output
-    const coverageMatch = output.match(/All files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/);
-    
+    const coverageMatch = output.match(
+      /All files\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)\s+\|\s+([\d.]+)/
+    );
+
     if (coverageMatch) {
       return {
         statements: parseFloat(coverageMatch[1]),
         branches: parseFloat(coverageMatch[2]),
         functions: parseFloat(coverageMatch[3]),
-        lines: parseFloat(coverageMatch[4])
+        lines: parseFloat(coverageMatch[4]),
       };
     }
 
@@ -190,11 +197,15 @@ class E2ETestRunner {
   private logTestResult(result: TestResult): void {
     const status = result.failed === 0 ? '✅' : '❌';
     const duration = (result.duration / 1000).toFixed(1);
-    
-    console.log(`${status} ${result.name}: ${result.passed} passed, ${result.failed} failed, ${result.skipped} skipped (${duration}s)`);
-    
+
+    console.log(
+      `${status} ${result.name}: ${result.passed} passed, ${result.failed} failed, ${result.skipped} skipped (${duration}s)`
+    );
+
     if (result.coverage) {
-      console.log(`   📊 Coverage: ${result.coverage.lines}% lines, ${result.coverage.functions}% functions`);
+      console.log(
+        `   📊 Coverage: ${result.coverage.lines}% lines, ${result.coverage.functions}% functions`
+      );
     }
   }
 
@@ -210,14 +221,14 @@ class E2ETestRunner {
         totalPassed: this.results.reduce((sum, r) => sum + r.passed, 0),
         totalFailed: this.results.reduce((sum, r) => sum + r.failed, 0),
         totalSkipped: this.results.reduce((sum, r) => sum + r.skipped, 0),
-        overallSuccess: this.results.every(r => r.failed === 0)
+        overallSuccess: this.results.every(r => r.failed === 0),
       },
       testSuites: this.results,
       environment: {
         nodeVersion: process.version,
         platform: process.platform,
-        arch: process.arch
-      }
+        arch: process.arch,
+      },
     };
 
     writeFileSync('./test-reports/e2e-test-results.json', JSON.stringify(jsonReport, null, 2));
@@ -293,7 +304,9 @@ class E2ETestRunner {
             </div>
         </div>
 
-        ${report.testSuites.map((suite: any) => `
+        ${report.testSuites
+          .map(
+            (suite: any) => `
             <div class="test-suite">
                 <div class="suite-header">
                     <h3>${suite.name} 
@@ -307,7 +320,9 @@ class E2ETestRunner {
                        Skipped: ${suite.skipped}</p>
                 </div>
                 <div class="suite-content">
-                    ${suite.coverage ? `
+                    ${
+                      suite.coverage
+                        ? `
                         <h4>Code Coverage</h4>
                         <div>
                             Lines: ${suite.coverage.lines}%
@@ -321,10 +336,14 @@ class E2ETestRunner {
                                 <div class="coverage-fill" style="width: ${suite.coverage.functions}%"></div>
                             </div>
                         </div>
-                    ` : '<p>No coverage data available</p>'}
+                    `
+                        : '<p>No coverage data available</p>'
+                    }
                 </div>
             </div>
-        `).join('')}
+        `
+          )
+          .join('')}
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d;">
             <p>Generated by MCP Smart Typer E2E Test Runner</p>
@@ -355,14 +374,18 @@ class E2ETestRunner {
 
 ## Test Suites
 
-${report.testSuites.map((suite: any) => `
+${report.testSuites
+  .map(
+    (suite: any) => `
 ### ${suite.name} ${suite.failed === 0 ? '✅' : '❌'}
 
 - **Duration:** ${(suite.duration / 1000).toFixed(1)}s
 - **Results:** ${suite.passed} passed, ${suite.failed} failed, ${suite.skipped} skipped
 ${suite.coverage ? `- **Coverage:** ${suite.coverage.lines}% lines, ${suite.coverage.functions}% functions` : '- **Coverage:** Not available'}
 
-`).join('')}
+`
+  )
+  .join('')}
 
 ## Environment
 
@@ -381,7 +404,7 @@ ${suite.coverage ? `- **Coverage:** ${suite.coverage.lines}% lines, ${suite.cove
   private displaySummary(): void {
     console.log('\n🎯 Test Execution Summary');
     console.log('========================');
-    
+
     const totalTests = this.results.reduce((sum, r) => sum + r.passed + r.failed + r.skipped, 0);
     const totalPassed = this.results.reduce((sum, r) => sum + r.passed, 0);
     const totalFailed = this.results.reduce((sum, r) => sum + r.failed, 0);

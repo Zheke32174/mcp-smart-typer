@@ -5,13 +5,13 @@
 
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
 import { Browser, Page, chromium } from 'playwright';
-import { 
-  createTestMCPClient, 
-  createTestPage, 
-  createSampleLoginPage, 
+import {
+  createTestMCPClient,
+  createTestPage,
+  createSampleLoginPage,
   createSampleSearchPage,
   takeDebugScreenshot,
-  TestMCPClient
+  TestMCPClient,
 } from '../test-utils.js';
 
 describe('Field Detection E2E Tests', () => {
@@ -21,10 +21,10 @@ describe('Field Detection E2E Tests', () => {
 
   beforeAll(async () => {
     console.log('🚀 Starting field detection E2E tests...');
-    
+
     // Start headless browser
     browser = await chromium.launch({ headless: true });
-    
+
     // Create MCP client (will use mock implementation for tests)
     mcpClient = createTestMCPClient();
   });
@@ -56,10 +56,10 @@ describe('Field Detection E2E Tests', () => {
     test('should detect email and password fields with high precision', async () => {
       // Setup: Create login page
       await createSampleLoginPage(page);
-      
+
       // Mock the detect_fields call (in real scenario, this would communicate with native client)
       const mockDetectFields = async (params: any) => {
-        const pageFields = await page.$$eval('input', (inputs) =>
+        const pageFields = await page.$$eval('input', inputs =>
           inputs.map((input, index) => ({
             id: `field_${input.name || input.type}_${String(index).padStart(3, '0')}`,
             name: input.name || `unnamed_${index}`,
@@ -72,10 +72,10 @@ describe('Field Detection E2E Tests', () => {
               x: Math.round(Math.random() * 100 + 100),
               y: Math.round(Math.random() * 100 + 150 + index * 50),
               width: 300,
-              height: 40
+              height: 40,
             },
             confidence: 0.9 + Math.random() * 0.1,
-            analysis_method: 'playwright_mock'
+            analysis_method: 'playwright_mock',
           }))
         );
 
@@ -85,20 +85,20 @@ describe('Field Detection E2E Tests', () => {
             title: await page.title(),
             className: 'Chrome_WidgetWin_1',
             handle: '12345',
-            bounds: { x: 0, y: 0, width: 1200, height: 800 }
-          }
+            bounds: { x: 0, y: 0, width: 1200, height: 800 },
+          },
         };
       };
 
       // Execute detection
       const result = await mockDetectFields({
         contextHint: 'login-form',
-        confidence: 0.8
+        confidence: 0.8,
       });
 
       // Assertions
       expect(result.fields).toHaveLength(4); // username, password, remember checkbox, hidden token
-      
+
       // Find email field
       const emailField = result.fields.find(f => f.semantic_type === 'email');
       expect(emailField).toBeDefined();
@@ -123,9 +123,11 @@ describe('Field Detection E2E Tests', () => {
       expect(hiddenField).toBeDefined();
       expect(hiddenField?.name).toBe('token');
 
-      console.log(`✅ Detected ${result.fields.length} fields with average confidence: ${
-        (result.fields.reduce((sum, f) => sum + f.confidence, 0) / result.fields.length).toFixed(3)
-      }`);
+      console.log(
+        `✅ Detected ${result.fields.length} fields with average confidence: ${(
+          result.fields.reduce((sum, f) => sum + f.confidence, 0) / result.fields.length
+        ).toFixed(3)}`
+      );
     });
 
     test('should handle different confidence thresholds', async () => {
@@ -136,12 +138,12 @@ describe('Field Detection E2E Tests', () => {
           { id: 'field_1', name: 'username', confidence: 0.95, type: 'email' },
           { id: 'field_2', name: 'password', confidence: 0.92, type: 'password' },
           { id: 'field_3', name: 'remember', confidence: 0.75, type: 'checkbox' },
-          { id: 'field_4', name: 'token', confidence: 0.60, type: 'hidden' }
+          { id: 'field_4', name: 'token', confidence: 0.6, type: 'hidden' },
         ];
 
         return {
           fields: allFields.filter(f => f.confidence >= minConfidence),
-          windowInfo: { title: 'Test Page' }
+          windowInfo: { title: 'Test Page' },
         };
       };
 
@@ -170,7 +172,7 @@ describe('Field Detection E2E Tests', () => {
           type: input.type,
           placeholder: input.placeholder,
           required: input.required,
-          className: input.className
+          className: input.className,
         }));
       });
 
@@ -189,11 +191,11 @@ describe('Field Detection E2E Tests', () => {
               x: 100 + index * 10,
               y: 150 + index * 50,
               width: 300,
-              height: 40
+              height: 40,
             },
-            confidence: 0.9 + Math.random() * 0.1
-          }
-        }))
+            confidence: 0.9 + Math.random() * 0.1,
+          },
+        })),
       };
 
       // Verify metadata accuracy
@@ -215,24 +217,26 @@ describe('Field Detection E2E Tests', () => {
 
       // Mock detection for search page
       const mockSearchDetection = async () => {
-        const fields = await page.$$eval('input, select', (elements) =>
+        const fields = await page.$$eval('input, select', elements =>
           elements.map((el, index) => {
             const isSelect = el.tagName.toLowerCase() === 'select';
             return {
               id: el.id || `field_${index}`,
               name: el.getAttribute('name') || el.id,
               type: isSelect ? 'select' : (el as HTMLInputElement).type,
-              description: el.getAttribute('placeholder') || `${isSelect ? 'select' : (el as HTMLInputElement).type} field`,
+              description:
+                el.getAttribute('placeholder') ||
+                `${isSelect ? 'select' : (el as HTMLInputElement).type} field`,
               placeholder: el.getAttribute('placeholder'),
               semantic_type: detectSemanticType(el.id, el.getAttribute('placeholder') || ''),
               bounds: {
                 x: 100 + (index % 2) * 200,
                 y: 200 + Math.floor(index / 2) * 60,
                 width: isSelect ? 180 : 200,
-                height: 40
+                height: 40,
               },
               confidence: 0.85 + Math.random() * 0.15,
-              analysis_method: 'playwright_semantic'
+              analysis_method: 'playwright_semantic',
             };
           })
         );
@@ -294,8 +298,8 @@ describe('Field Detection E2E Tests', () => {
               x: Math.round(rect.x),
               y: Math.round(rect.y),
               width: Math.round(rect.width),
-              height: Math.round(rect.height)
-            }
+              height: Math.round(rect.height),
+            },
           };
         });
       });
@@ -308,9 +312,9 @@ describe('Field Detection E2E Tests', () => {
           type: 'input',
           metadata: {
             bounds: item.bounds,
-            confidence: 0.9
-          }
-        }))
+            confidence: 0.9,
+          },
+        })),
       };
 
       // Verify bounds are reasonable
@@ -347,8 +351,8 @@ describe('Field Detection E2E Tests', () => {
           title: await page.title(),
           className: 'Chrome_WidgetWin_1',
           handle: '12345',
-          bounds: { x: 0, y: 0, width: 1200, height: 800 }
-        }
+          bounds: { x: 0, y: 0, width: 1200, height: 800 },
+        },
       });
 
       const result = await mockEmptyDetection();
@@ -370,7 +374,8 @@ describe('Field Detection E2E Tests', () => {
 
     test('should handle malformed HTML gracefully', async () => {
       // Create page with malformed HTML
-      await page.setContent(`
+      await page.setContent(
+        `
         <!DOCTYPE html>
         <html>
         <body>
@@ -381,17 +386,19 @@ describe('Field Detection E2E Tests', () => {
           </form>
         </body>
         </html>
-      `, { waitUntil: 'domcontentloaded' });
+      `,
+        { waitUntil: 'domcontentloaded' }
+      );
 
       const mockMalformedDetection = async () => {
         try {
-          const fields = await page.$$eval('input', (inputs) =>
+          const fields = await page.$$eval('input', inputs =>
             inputs.map((input, index) => ({
               id: `field_${index}`,
               name: input.name || `unnamed_${index}`,
               type: input.type || 'text',
               confidence: 0.8,
-              analysis_method: 'robust_detection'
+              analysis_method: 'robust_detection',
             }))
           );
 
@@ -412,17 +419,17 @@ describe('Field Detection E2E Tests', () => {
       await createSampleLoginPage(page);
 
       const startTime = Date.now();
-      
+
       const mockFastDetection = async () => {
         // Simulate realistic detection time
         await new Promise(resolve => setTimeout(resolve, 200)); // 200ms simulation
-        
+
         return {
           fields: [
             { id: 'field_1', name: 'username', confidence: 0.95 },
-            { id: 'field_2', name: 'password', confidence: 0.92 }
+            { id: 'field_2', name: 'password', confidence: 0.92 },
           ],
-          detectionTime: Date.now() - startTime
+          detectionTime: Date.now() - startTime,
         };
       };
 
@@ -431,48 +438,49 @@ describe('Field Detection E2E Tests', () => {
 
       expect(detectionTime).toBeLessThan(1000); // Should complete within 1 second
       expect(result.fields).toHaveLength(2);
-      
+
       console.log(`✅ Detection completed in ${detectionTime}ms`);
     });
 
     test('should maintain high accuracy across different page types', async () => {
       const testPages = [
         { name: 'login', setup: createSampleLoginPage, expectedFields: 4 },
-        { name: 'search', setup: createSampleSearchPage, expectedFields: 5 }
+        { name: 'search', setup: createSampleSearchPage, expectedFields: 5 },
       ];
 
       const accuracyResults = [];
 
       for (const testPage of testPages) {
         await testPage.setup(page);
-        
+
         const mockPageDetection = async () => {
           const actualFieldCount = await page.$$eval('input, select', els => els.length);
           const detectedFields = Math.min(actualFieldCount, testPage.expectedFields);
-          
+
           return {
             fields: Array.from({ length: detectedFields }, (_, i) => ({
               id: `field_${i}`,
-              confidence: 0.85 + Math.random() * 0.15
+              confidence: 0.85 + Math.random() * 0.15,
             })),
-            actualFieldCount
+            actualFieldCount,
           };
         };
 
         const result = await mockPageDetection();
         const accuracy = result.fields.length / result.actualFieldCount;
-        
+
         accuracyResults.push({
           page: testPage.name,
           accuracy,
           detected: result.fields.length,
-          actual: result.actualFieldCount
+          actual: result.actualFieldCount,
         });
 
         expect(accuracy).toBeGreaterThan(0.8); // At least 80% accuracy
       }
 
-      const averageAccuracy = accuracyResults.reduce((sum, r) => sum + r.accuracy, 0) / accuracyResults.length;
+      const averageAccuracy =
+        accuracyResults.reduce((sum, r) => sum + r.accuracy, 0) / accuracyResults.length;
       expect(averageAccuracy).toBeGreaterThan(0.85); // Average accuracy should be > 85%
 
       console.log('📊 Accuracy Results:', accuracyResults);

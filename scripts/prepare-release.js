@@ -1,159 +1,165 @@
 #!/usr/bin/env node
 
 /**
- * Prepare Release Script
- * 
- * This script helps prepare a new release by:
- * 1. Updating version numbers across all packages
- * 2. Generating changelog entries
- * 3. Ensuring MCP specification compliance
- * 4. Validating package integrity
+ * Prepare one reviewable npm-package version change.
+ *
+ * This script updates the monorepo and mock npm package version fields and emits
+ * a preparation receipt. The experimental Python native helper has an
+ * independent lifecycle and is intentionally not versioned by this command.
+ *
+ * This script does not create tags, publish packages, create releases, generate
+ * compatibility claims, or grant publication authority.
  */
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
-// MCP specification version this server supports
-const MCP_SPEC_VERSION = '1.0.0';
+const root = path.resolve(__dirname, '..');
+const targetVersion = process.argv[2];
+const expectedRepository = 'git+https://github.com/Zheke32174/mcp-smart-typer.git';
 
-function updatePackageVersion(packagePath, newVersion) {
-    const packageJsonPath = path.join(packagePath, 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-    
-    packageJson.version = newVersion;
-    
-    // Ensure MCP compatibility metadata
-    if (!packageJson.keywords.includes('mcp')) {
-        packageJson.keywords.unshift('mcp');
-    }
-    if (!packageJson.keywords.includes('model-context-protocol')) {
-        packageJson.keywords.push('model-context-protocol');
-    }
-    
-    // Add MCP specification version
-    packageJson.mcpSpecVersion = MCP_SPEC_VERSION;
-    
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
-    console.log(`✅ Updated ${packagePath}/package.json to version ${newVersion}`);
+function fail(message) {
+  console.error(`release preparation refused: ${message}`);
+  process.exit(1);
 }
 
-function updatePythonVersion(pyprojectPath, newVersion) {
-    let content = fs.readFileSync(pyprojectPath, 'utf8');
-    content = content.replace(/version = "[^"]*"/, `version = "${newVersion}"`);
-    fs.writeFileSync(pyprojectPath, content);
-    console.log(`✅ Updated ${pyprojectPath} to version ${newVersion}`);
+function runGit(args) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (result.status !== 0) {
+    fail(`git ${args.join(' ')} failed: ${(result.stderr || result.stdout || '').trim()}`);
+  }
+  return result.stdout.trim();
 }
 
-function validateMCPCompliance() {
-    const serverPackagePath = path.join(__dirname, '..', 'packages', 'mcp-server-smart-typer', 'package.json');
-    const packageJson = JSON.parse(fs.readFileSync(serverPackagePath, 'utf8'));
-    
-    const required = {
-        '@modelcontextprotocol/sdk': 'MCP SDK dependency'
-    };
-    
-    for (const [dep, description] of Object.entries(required)) {
-        if (!packageJson.dependencies[dep]) {
-            throw new Error(`❌ Missing required dependency: ${dep} (${description})`);
-        }
+function canonicalJson(value) {
+  const sort = (item) => {
+    if (Array.isArray(item)) return item.map(sort);
+    if (item && typeof item === 'object') {
+      return Object.fromEntries(Object.keys(item).sort().map((key) => [key, sort(item[key])]));
     }
-    
-    console.log('✅ MCP specification compliance validated');
+    return item;
+  };
+  return `${JSON.stringify(sort(value))}\n`;
 }
 
-function generateChangelog(version) {
-    try {
-        const lastTag = execSync('git describe --tags --abbrev=0 HEAD~1', { encoding: 'utf8' }).trim();
-        const commits = execSync(`git log --pretty=format:"- %s" ${lastTag}..HEAD`, { encoding: 'utf8' });
-        
-        const changelogEntry = `
-## [${version}] - ${new Date().toISOString().split('T')[0]}
-
-### MCP Specification Compliance
-- Supports MCP specification version ${MCP_SPEC_VERSION}
-- Full compatibility with MCP client implementations
-
-### Changes
-${commits}
-
-### Technical Details
-- Windows UI Automation via gRPC protocol
-- Enhanced security and permission management
-- Comprehensive error handling and logging
-- Cross-platform compatibility (Windows primary)
-
-`;
-        
-        const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md');
-        let existingChangelog = '';
-        
-        if (fs.existsSync(changelogPath)) {
-            existingChangelog = fs.readFileSync(changelogPath, 'utf8');
-        } else {
-            existingChangelog = '# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n';
-        }
-        
-        const newChangelog = existingChangelog.replace(
-            '# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n',
-            `# Changelog\n\nAll notable changes to this project will be documented in this file.\n${changelogEntry}`
-        );
-        
-        fs.writeFileSync(changelogPath, newChangelog);
-        console.log(`✅ Updated CHANGELOG.md with version ${version} entries`);
-        
-    } catch (error) {
-        console.warn('⚠️  Could not generate changelog (no previous tags found)');
-    }
+function fsyncDirectoryBestEffort(directory) {
+  let descriptor;
+  try {
+    descriptor = fs.openSync(directory, 'r');
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    if (!['EACCES', 'EINVAL', 'EISDIR', 'ENOTSUP', 'EPERM'].includes(error.code)) throw error;
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
 }
 
-function main() {
-    const args = process.argv.slice(2);
-    const newVersion = args[0];
-    
-    if (!newVersion) {
-        console.error('Usage: node scripts/prepare-release.js <version>');
-        console.error('Example: node scripts/prepare-release.js 2.1.0');
-        process.exit(1);
+function atomicWrite(file, text) {
+  const directory = path.dirname(file);
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const temporary = path.join(
+    directory,
+    `.${path.basename(file)}.tmp.${process.pid}.${crypto.randomUUID().replaceAll('-', '')}`,
+  );
+  const descriptor = fs.openSync(temporary, 'wx', 0o600);
+  try {
+    const data = Buffer.from(text, 'utf8');
+    let offset = 0;
+    while (offset < data.length) {
+      const written = fs.writeSync(descriptor, data, offset, data.length - offset, null);
+      if (written <= 0) throw new Error('write made no progress');
+      offset += written;
     }
-    
-    // Validate version format
-    if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
-        console.error('❌ Version must be in semver format (e.g., 2.1.0)');
-        process.exit(1);
-    }
-    
-    console.log(`🚀 Preparing release ${newVersion}...`);
-    
-    try {
-        // Update root package.json
-        updatePackageVersion(path.join(__dirname, '..'), newVersion);
-        
-        // Update MCP server package
-        updatePackageVersion(path.join(__dirname, '..', 'packages', 'mcp-server-smart-typer'), newVersion);
-        
-        // Update Python package
-        updatePythonVersion(path.join(__dirname, '..', 'packages', 'native-helpers', 'pyproject.toml'), newVersion);
-        
-        // Validate MCP compliance
-        validateMCPCompliance();
-        
-        // Generate changelog
-        generateChangelog(newVersion);
-        
-        console.log('\n🎉 Release preparation complete!');
-        console.log('\nNext steps:');
-        console.log('1. Review the changes: git diff');
-        console.log('2. Commit the changes: git add -A && git commit -m "chore: prepare release v' + newVersion + '"');
-        console.log('3. Create and push the tag: git tag v' + newVersion + ' && git push origin v' + newVersion);
-        console.log('4. The CI/CD pipeline will handle the rest!');
-        
-    } catch (error) {
-        console.error('❌ Release preparation failed:', error.message);
-        process.exit(1);
-    }
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    fs.closeSync(descriptor);
+    fs.rmSync(temporary, { force: true });
+    throw error;
+  }
+  fs.closeSync(descriptor);
+  fs.renameSync(temporary, file);
+  fsyncDirectoryBestEffort(directory);
 }
 
-if (require.main === module) {
-    main();
+function readJson(relative) {
+  return JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
 }
+
+function digestFile(relative) {
+  return crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(path.join(root, relative)))
+    .digest('hex');
+}
+
+if (!targetVersion || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(targetVersion)) {
+  fail('usage: node scripts/prepare-release.js <semver>');
+}
+
+const status = runGit(['status', '--porcelain=v1', '--untracked-files=all']);
+if (status) fail('the Git worktree must be clean before changing release identity');
+
+const sourceCommit = runGit(['rev-parse', '--verify', 'HEAD']);
+if (!/^[0-9a-f]{40}$/.test(sourceCommit)) fail('HEAD is not one exact commit identity');
+
+const rootPath = 'package.json';
+const serverPath = 'packages/mcp-server-smart-typer/package.json';
+const receiptPath = 'release-preparation.v1.json';
+
+const rootPackage = readJson(rootPath);
+const serverPackage = readJson(serverPath);
+
+if (serverPackage.name !== '@mcp-smart-typer/server') {
+  fail('npm package ownership is not @mcp-smart-typer/server');
+}
+if (serverPackage.repository?.url !== expectedRepository) {
+  fail('npm package repository identity is not the owned GitHub repository');
+}
+
+const currentVersions = [rootPackage.version, serverPackage.version];
+if (!currentVersions.every((value) => value === currentVersions[0])) {
+  fail(`current npm package versions disagree: ${currentVersions.join(', ')}`);
+}
+if (currentVersions[0] === targetVersion) fail(`version is already ${targetVersion}`);
+
+rootPackage.version = targetVersion;
+serverPackage.version = targetVersion;
+
+atomicWrite(path.join(root, rootPath), `${JSON.stringify(rootPackage, null, 2)}\n`);
+atomicWrite(path.join(root, serverPath), `${JSON.stringify(serverPackage, null, 2)}\n`);
+
+const receipt = {
+  schema: 'mcp-smart-typer.release-preparation/v2',
+  sourceCommit,
+  previousVersion: currentVersions[0],
+  targetVersion,
+  repository: 'https://github.com/Zheke32174/mcp-smart-typer',
+  packageName: '@mcp-smart-typer/server',
+  authority: 'none',
+  nativeHelperVersionChanged: false,
+  files: [rootPath, serverPath].map((file) => ({
+    path: file,
+    sha256: digestFile(file),
+  })),
+  requiredNextSteps: [
+    'review the complete npm-package diff',
+    'run npm run validate-cicd and the maintained Node release matrix',
+    'review native-helper diagnostics separately only when native-helper inputs changed',
+    'commit the reviewed npm-package version change',
+    'create an exact matching version tag only after review',
+    'review the candidate receipt before any separate publication decision',
+  ],
+};
+atomicWrite(path.join(root, receiptPath), canonicalJson(receipt));
+
+console.log(`Prepared reviewable npm package version change ${currentVersions[0]} -> ${targetVersion}`);
+console.log(`Source commit: ${sourceCommit}`);
+console.log(`Receipt: ${receiptPath}`);
+console.log('The experimental native-helper version was not changed.');
+console.log('No tag, package publication, GitHub Release, or compatibility claim was created.');

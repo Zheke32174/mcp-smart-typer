@@ -5,11 +5,11 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { 
-  focusFieldRequest, 
+import {
+  focusFieldRequest,
   focusFieldResponse,
   FocusFieldRequest,
-  FocusFieldResponse 
+  FocusFieldResponse,
 } from '../schemas/index.js';
 import { logger } from '../utils/logger.js';
 import { generateAsyncJobId } from '../utils/job-manager.js';
@@ -23,15 +23,15 @@ export function registerFocusFieldTool(server: McpServer, nativeClient: any) {
     try {
       // Validate input with Zod
       const params = focusFieldRequest.parse(request.params.arguments);
-      logger.info('Focusing field:', { 
+      logger.info('Focusing field:', {
         fieldId: params.fieldId,
         bringToFront: params.bringToFront,
-        scrollIntoView: params.scrollIntoView 
+        scrollIntoView: params.scrollIntoView,
       });
 
       // Generate async job ID for tracking
       const asyncJobId = generateAsyncJobId();
-      
+
       // Call native client to focus field
       const result = await nativeClient.focusField({
         fieldId: params.fieldId,
@@ -45,18 +45,18 @@ export function registerFocusFieldTool(server: McpServer, nativeClient: any) {
         previousFocus: result.previousFocus,
         windowBroughtToFront: result.windowBroughtToFront || false,
         asyncJobId,
-        errorCode: result.success ? undefined : (result.errorCode || 'FOCUS_ERROR'),
-        errorMessage: result.success ? undefined : (result.errorMessage || 'Failed to focus field'),
+        errorCode: result.success ? undefined : result.errorCode || 'FOCUS_ERROR',
+        errorMessage: result.success ? undefined : result.errorMessage || 'Failed to focus field',
       };
 
       // Validate response with Zod
       const validatedResponse = focusFieldResponse.parse(response);
-      
-      logger.info('Field focus completed:', { 
+
+      logger.info('Field focus completed:', {
         fieldId: params.fieldId,
         success: response.success,
         windowBroughtToFront: response.windowBroughtToFront,
-        asyncJobId 
+        asyncJobId,
       });
 
       return {
@@ -69,7 +69,7 @@ export function registerFocusFieldTool(server: McpServer, nativeClient: any) {
       };
     } catch (error) {
       logger.error('Failed to focus field:', error);
-      
+
       // Return error response with proper schema
       const errorResponse: FocusFieldResponse = {
         success: false,

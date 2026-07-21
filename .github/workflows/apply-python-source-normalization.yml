@@ -1,0 +1,85 @@
+name: Diagnose Python source normalization
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/apply-python-source-normalization.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-python-source-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Capture exact corrupted source and decoder evidence
+        shell: pwsh
+        run: |
+          @'
+          import ast
+          import json
+          from pathlib import Path
+
+          source = Path('packages/native-helpers/src/standalone_production_demo.py')
+          text = source.read_text(encoding='utf-8')
+          first_literal_newline = text.find('\\n', 10000)
+          report = {
+              'schema': 'mcp-smart-typer.python-source-diagnostic/v1',
+              'source_bytes': len(text.encode('utf-8')),
+              'physical_lines': text.count('\n') + 1,
+              'literal_backslash_n_count': text.count('\\n'),
+              'literal_backslash_quote_count': text.count('\\"'),
+              'first_literal_backslash_n': first_literal_newline,
+              'prefix_repr': repr(text[max(0, first_literal_newline - 300):first_literal_newline + 300]),
+              'tail_prefix_repr': repr(text[first_literal_newline:first_literal_newline + 2000]),
+              'tail_suffix_repr': repr(text[-2000:]),
+          }
+          try:
+              ast.parse(text, filename=str(source))
+              report['current_parse'] = 'success'
+          except SyntaxError as exc:
+              report['current_parse'] = {
+                  'message': exc.msg,
+                  'line': exc.lineno,
+                  'offset': exc.offset,
+                  'text': exc.text,
+              }
+          for mode, candidate in {
+              'whole_tail': text[first_literal_newline:].rstrip('\r\n'),
+              'after_close': text[text.find('                })\\n') + len('                })'):].rstrip('\r\n'),
+          }.items():
+              try:
+                  decoded = json.loads('"' + candidate + '"')
+                  report[f'{mode}_json_decode'] = {
+                      'status': 'success',
+                      'decoded_lines': decoded.count('\n') + 1,
+                  }
+              except Exception as exc:
+                  report[f'{mode}_json_decode'] = {
+                      'status': 'failure',
+                      'type': type(exc).__name__,
+                      'message': str(exc),
+                  }
+          Path('python-source-diagnostic.json').write_text(
+              json.dumps(report, sort_keys=True, indent=2) + '\n', encoding='utf-8'
+          )
+          Path('standalone-production-demo.corrupt.py').write_bytes(source.read_bytes())
+          print(json.dumps(report, sort_keys=True, indent=2))
+          '@ | python -
+      - name: Upload exact source diagnostics
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: python-source-diagnostic-${{ github.sha }}
+          path: |
+            python-source-diagnostic.json
+            standalone-production-demo.corrupt.py
+          if-no-files-found: error
+          retention-days: 14

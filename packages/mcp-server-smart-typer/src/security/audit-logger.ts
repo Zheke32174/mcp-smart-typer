@@ -30,20 +30,24 @@ export class AuditLogger {
   constructor(sessionId?: string) {
     this.sessionId = sessionId || this.generateSessionId();
     this.entries = [];
-    
+
     // Create log directory path: %USERPROFILE%\Documents\mcp-typer-logs\
     this.logDirectory = join(homedir(), 'Documents', 'mcp-typer-logs');
     this.ensureLogDirectory();
-    
+
     // Create log file with format: yyyy-mm-dd_HHMMSS.log
-    const timestamp = new Date().toISOString().replace(/:/g, '').replace(/\..+/, '').replace('T', '_');
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/:/g, '')
+      .replace(/\..+/, '')
+      .replace('T', '_');
     this.logFilePath = join(this.logDirectory, `${timestamp}.log`);
-    
+
     this.initializeLogFile();
-    
+
     logger.info('Audit Logger initialized', {
       sessionId: this.sessionId,
-      logFilePath: this.logFilePath
+      logFilePath: this.logFilePath,
     });
   }
 
@@ -60,7 +64,7 @@ export class AuditLogger {
     } catch (error) {
       logger.error('Failed to create audit log directory', {
         directory: this.logDirectory,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw new Error(`Failed to create audit log directory: ${error}`);
     }
@@ -75,23 +79,22 @@ export class AuditLogger {
         `# Log Format: JSON Lines (one JSON object per line)`,
         '',
       ].join('\n');
-      
+
       writeFileSync(this.logFilePath, header, 'utf8');
-      
+
       // Log session start
       this.logOperation('SESSION_START', 'audit', {
         success: true,
         metadata: {
           sessionId: this.sessionId,
           logFilePath: this.logFilePath,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       });
-      
     } catch (error) {
       logger.error('Failed to initialize audit log file', {
         logFilePath: this.logFilePath,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw new Error(`Failed to initialize audit log file: ${error}`);
     }
@@ -100,17 +103,25 @@ export class AuditLogger {
   /**
    * Log an operation to the audit log
    */
-  logOperation(operation: string, toolName: string, details: {
-    fieldId?: string;
-    success: boolean;
-    errorCode?: string;
-    metadata?: Record<string, any>;
-  }): void {
+  logOperation(
+    operation: string,
+    toolName: string,
+    details: {
+      fieldId?: string;
+      success: boolean;
+      errorCode?: string;
+      metadata?: Record<string, any>;
+    }
+  ): void {
     const timestamp = new Date().toISOString();
-    
+
     // Create secure log entry with masked sensitive data
-    const secureLogEntry = securityManager.createSecureLogEntry('info', 'Audit log entry', details.metadata);
-    
+    const secureLogEntry = securityManager.createSecureLogEntry(
+      'info',
+      'Audit log entry',
+      details.metadata
+    );
+
     const entry: AuditLogEntry = {
       timestamp,
       sessionId: this.sessionId,
@@ -120,7 +131,7 @@ export class AuditLogger {
       success: details.success,
       errorCode: details.errorCode,
       metadata: secureLogEntry.data,
-      hasSensitiveData: secureLogEntry.hasSensitiveData
+      hasSensitiveData: secureLogEntry.hasSensitiveData,
     };
 
     // Add to in-memory entries
@@ -133,7 +144,7 @@ export class AuditLogger {
       operation,
       toolName,
       success: details.success,
-      hasSensitiveData: entry.hasSensitiveData
+      hasSensitiveData: entry.hasSensitiveData,
     });
   }
 
@@ -145,7 +156,7 @@ export class AuditLogger {
       logger.error('Failed to write audit log entry', {
         logFilePath: this.logFilePath,
         operation: entry.operation,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -153,7 +164,12 @@ export class AuditLogger {
   /**
    * Log typing operation
    */
-  logTypingOperation(fieldId: string, success: boolean, metadata?: Record<string, any>, errorCode?: string): void {
+  logTypingOperation(
+    fieldId: string,
+    success: boolean,
+    metadata?: Record<string, any>,
+    errorCode?: string
+  ): void {
     this.logOperation('TYPE_TEXT', 'type_text', {
       fieldId,
       success,
@@ -163,8 +179,8 @@ export class AuditLogger {
         charactersTyped: metadata?.charactersTyped || 0,
         timeTaken: metadata?.timeTaken || 0,
         clearFirst: metadata?.clearFirst || false,
-        pressEnter: metadata?.pressEnter || false
-      }
+        pressEnter: metadata?.pressEnter || false,
+      },
     });
   }
 
@@ -179,15 +195,20 @@ export class AuditLogger {
         ...metadata,
         fieldsDetected: metadata?.fieldsDetected || 0,
         contextHint: metadata?.contextHint,
-        includeHidden: metadata?.includeHidden || false
-      }
+        includeHidden: metadata?.includeHidden || false,
+      },
     });
   }
 
   /**
    * Log field focus operation
    */
-  logFieldFocus(fieldId: string, success: boolean, metadata?: Record<string, any>, errorCode?: string): void {
+  logFieldFocus(
+    fieldId: string,
+    success: boolean,
+    metadata?: Record<string, any>,
+    errorCode?: string
+  ): void {
     this.logOperation('FOCUS_FIELD', 'focus_field', {
       fieldId,
       success,
@@ -195,15 +216,20 @@ export class AuditLogger {
       metadata: {
         ...metadata,
         bringToFront: metadata?.bringToFront || false,
-        scrollIntoView: metadata?.scrollIntoView || false
-      }
+        scrollIntoView: metadata?.scrollIntoView || false,
+      },
     });
   }
 
   /**
    * Log field value retrieval operation
    */
-  logFieldValueRetrieval(fieldId: string, success: boolean, metadata?: Record<string, any>, errorCode?: string): void {
+  logFieldValueRetrieval(
+    fieldId: string,
+    success: boolean,
+    metadata?: Record<string, any>,
+    errorCode?: string
+  ): void {
     this.logOperation('GET_FIELD_VALUE', 'get_field_value', {
       fieldId,
       success,
@@ -211,8 +237,8 @@ export class AuditLogger {
       metadata: {
         ...metadata,
         valueLength: metadata?.valueLength || 0,
-        maxLength: metadata?.maxLength || 10000
-      }
+        maxLength: metadata?.maxLength || 10000,
+      },
     });
   }
 
@@ -227,8 +253,8 @@ export class AuditLogger {
         operation,
         reason,
         allowTypingEnv: process.env.ALLOW_TYPING === 'true',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -242,8 +268,8 @@ export class AuditLogger {
       metadata: {
         operation,
         warnings,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -257,8 +283,8 @@ export class AuditLogger {
       metadata: {
         ...metadata,
         originalOperation: operation,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 
@@ -272,14 +298,14 @@ export class AuditLogger {
         sessionId: this.sessionId,
         totalEntries: this.entries.length,
         duration: Date.now() - parseInt(this.sessionId.split('-')[2]),
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
 
     logger.info('Audit log session closed', {
       sessionId: this.sessionId,
       totalEntries: this.entries.length,
-      logFilePath: this.logFilePath
+      logFilePath: this.logFilePath,
     });
   }
 
@@ -308,7 +334,7 @@ export class AuditLogger {
       totalEntries: this.entries.length,
       operationCounts,
       successRate: this.entries.length > 0 ? successCount / this.entries.length : 0,
-      logFilePath: this.logFilePath
+      logFilePath: this.logFilePath,
     };
   }
 

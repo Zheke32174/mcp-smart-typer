@@ -71,7 +71,7 @@ export class MockNativeClient {
     confidence?: number;
   }): Promise<any> {
     logger.info('Mock: Detecting fields', params);
-    
+
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 200));
 
@@ -109,10 +109,10 @@ export class MockNativeClient {
     clearFirst?: boolean;
     pressEnter?: boolean;
   }): Promise<any> {
-    logger.info('Mock: Typing text', { 
-      fieldId: params.fieldId, 
+    logger.info('Mock: Typing text', {
+      fieldId: params.fieldId,
       textLength: params.text.length,
-      delay: params.delay 
+      delay: params.delay,
     });
 
     // Find the field
@@ -143,10 +143,7 @@ export class MockNativeClient {
     };
   }
 
-  async getFieldValue(params: {
-    fieldId: string;
-    maxLength?: number;
-  }): Promise<any> {
+  async getFieldValue(params: { fieldId: string; maxLength?: number }): Promise<any> {
     logger.info('Mock: Getting field value', { fieldId: params.fieldId });
 
     // Find the field
@@ -241,9 +238,11 @@ export class MockNativeClient {
     };
   }
 
-  async getWindowInfo(params: {
-    windowTitle?: string;
-  } = {}): Promise<any> {
+  async getWindowInfo(
+    params: {
+      windowTitle?: string;
+    } = {}
+  ): Promise<any> {
     logger.info('Mock: Getting window info', params);
 
     // Simulate window detection delay
@@ -273,18 +272,21 @@ export class MockNativeClient {
     };
   }
 
-  async takeScreenshot(params: {
-    region?: { x: number; y: number; width: number; height: number };
-    format?: 'png' | 'jpeg';
-    quality?: number;
-  } = {}): Promise<any> {
+  async takeScreenshot(
+    params: {
+      region?: { x: number; y: number; width: number; height: number };
+      format?: 'png' | 'jpeg';
+      quality?: number;
+    } = {}
+  ): Promise<any> {
     logger.info('Mock: Taking screenshot', params);
 
     // Simulate screenshot delay
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Generate mock base64 image data (1x1 transparent PNG)
-    const mockImageData = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI/hL+bHwAAAABJRU5ErkJggg==';
+    const mockImageData =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI/hL+bHwAAAABJRU5ErkJggg==';
 
     return {
       success: true,

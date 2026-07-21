@@ -43,12 +43,8 @@ Examples:
     parser.add_argument(
         "--port", type=int, default=50051, help="Port to listen on (default: 50051)"
     )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Enable verbose logging"
-    )
-    parser.add_argument(
-        "--host", default="localhost", help="Host to bind to (default: localhost)"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--host", default="localhost", help="Host to bind to (default: localhost)")
 
     args = parser.parse_args()
 
@@ -61,7 +57,7 @@ Examples:
 
     logger.info(f"Starting Windows UIA automation server on {args.host}:{args.port}")
     server = UIAGrpcServer(port=args.port)
-    
+
     try:
         server.start()
     except KeyboardInterrupt:

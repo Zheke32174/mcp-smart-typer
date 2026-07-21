@@ -37,10 +37,10 @@ export class RollbackManager {
     this.rollbackStates = new Map();
     this.maxRollbackHistory = 50; // Keep last 50 operations
     this.dryRunMode = process.env.DRY_RUN_MODE === 'true';
-    
+
     logger.info('Rollback Manager initialized', {
       dryRunMode: this.dryRunMode,
-      maxRollbackHistory: this.maxRollbackHistory
+      maxRollbackHistory: this.maxRollbackHistory,
     });
   }
 
@@ -74,20 +74,20 @@ export class RollbackManager {
   ): Promise<{ result?: T; dryRunResult?: DryRunResult; error?: Error }> {
     const operationId = this.generateOperationId();
     const isDryRun = options?.dryRun ?? this.dryRunMode;
-    
+
     logger.debug('Executing operation with rollback support', {
       operationId,
       operation,
       fieldId,
       isDryRun,
-      captureOriginalValue: options?.captureOriginalValue
+      captureOriginalValue: options?.captureOriginalValue,
     });
 
     try {
       // In dry-run mode, simulate the operation
       if (isDryRun) {
         const dryRunResult = await this.simulateOperation(operation, fieldId, options);
-        
+
         getAuditLogger().logOperation('DRY_RUN', operation, {
           fieldId,
           success: dryRunResult.wouldSucceed,
@@ -95,8 +95,8 @@ export class RollbackManager {
             operationId,
             predictedChanges: dryRunResult.predictedChanges,
             warnings: dryRunResult.warnings,
-            estimatedTime: dryRunResult.estimatedTime
-          }
+            estimatedTime: dryRunResult.estimatedTime,
+          },
         });
 
         return { dryRunResult };
@@ -110,7 +110,7 @@ export class RollbackManager {
         } catch (error) {
           logger.warn('Failed to capture original field value', {
             fieldId,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
@@ -125,7 +125,7 @@ export class RollbackManager {
         timestamp: new Date().toISOString(),
         fieldId,
         originalValue,
-        metadata: { success: true }
+        metadata: { success: true },
       };
 
       this.storeRollbackState(rollbackState);
@@ -134,17 +134,16 @@ export class RollbackManager {
         operationId,
         operation,
         fieldId,
-        hasOriginalValue: !!originalValue
+        hasOriginalValue: !!originalValue,
       });
 
       return { result };
-
     } catch (error) {
       logger.error('Operation failed', {
         operationId,
         operation,
         fieldId,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
 
       // Store failed operation state (in case we need to clean up)
@@ -153,7 +152,7 @@ export class RollbackManager {
         operation,
         timestamp: new Date().toISOString(),
         fieldId,
-        metadata: { success: false, error: error instanceof Error ? error.message : String(error) }
+        metadata: { success: false, error: error instanceof Error ? error.message : String(error) },
       };
 
       this.storeRollbackState(rollbackState);
@@ -165,7 +164,11 @@ export class RollbackManager {
   /**
    * Simulate an operation for dry-run mode
    */
-  private async simulateOperation(operation: string, fieldId: string, options?: any): Promise<DryRunResult> {
+  private async simulateOperation(
+    operation: string,
+    fieldId: string,
+    options?: any
+  ): Promise<DryRunResult> {
     const warnings: string[] = [];
     let wouldSucceed = true;
     let estimatedTime = 100; // Base time in milliseconds
@@ -177,12 +180,12 @@ export class RollbackManager {
       case 'type_text':
         const textLength = options?.text?.length || 0;
         estimatedTime = Math.max(100, textLength * 50); // 50ms per character
-        
+
         predictedChanges.push({
           fieldId,
           currentValue: '[SIMULATED_CURRENT_VALUE]',
           proposedValue: options?.text || '[SIMULATED_TEXT]',
-          changeType: options?.clearFirst ? 'type' : 'append' as const
+          changeType: options?.clearFirst ? 'type' : ('append' as const),
         });
 
         if (textLength > 1000) {
@@ -200,7 +203,7 @@ export class RollbackManager {
           fieldId,
           currentValue: '[SIMULATED_CURRENT_VALUE]',
           proposedValue: '',
-          changeType: 'clear' as const
+          changeType: 'clear' as const,
         });
         estimatedTime = 50;
         break;
@@ -217,7 +220,7 @@ export class RollbackManager {
       wouldSucceed,
       predictedChanges,
       warnings,
-      estimatedTime
+      estimatedTime,
     };
   }
 
@@ -226,12 +229,12 @@ export class RollbackManager {
    */
   private containsSensitivePatterns(text?: string): boolean {
     if (!text) return false;
-    
+
     const sensitivePatterns = [
       /password/i,
       /\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b/, // Credit card
       /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/, // SSN
-      /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}/ // Email
+      /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}/, // Email
     ];
 
     return sensitivePatterns.some(pattern => pattern.test(text));
@@ -240,9 +243,13 @@ export class RollbackManager {
   /**
    * Attempt to rollback the last operation
    */
-  async rollbackLastOperation(): Promise<{ success: boolean; error?: string; rollbackState?: RollbackState }> {
+  async rollbackLastOperation(): Promise<{
+    success: boolean;
+    error?: string;
+    rollbackState?: RollbackState;
+  }> {
     const lastOperationId = Array.from(this.rollbackStates.keys()).pop();
-    
+
     if (!lastOperationId) {
       return { success: false, error: 'No operations to rollback' };
     }
@@ -253,9 +260,11 @@ export class RollbackManager {
   /**
    * Rollback a specific operation by ID
    */
-  async rollbackOperation(operationId: string): Promise<{ success: boolean; error?: string; rollbackState?: RollbackState }> {
+  async rollbackOperation(
+    operationId: string
+  ): Promise<{ success: boolean; error?: string; rollbackState?: RollbackState }> {
     const rollbackState = this.rollbackStates.get(operationId);
-    
+
     if (!rollbackState) {
       return { success: false, error: `Operation ${operationId} not found in rollback history` };
     }
@@ -263,7 +272,7 @@ export class RollbackManager {
     logger.info('Attempting to rollback operation', {
       operationId,
       operation: rollbackState.operation,
-      fieldId: rollbackState.fieldId
+      fieldId: rollbackState.fieldId,
     });
 
     try {
@@ -280,32 +289,31 @@ export class RollbackManager {
         operationId,
         fieldId: rollbackState.fieldId,
         originalValue: rollbackState.originalValue,
-        rollbackMethod: rollbackState.originalValue ? 'restore' : 'clear'
+        rollbackMethod: rollbackState.originalValue ? 'restore' : 'clear',
       });
 
       logger.info('Operation rolled back successfully', {
         operationId,
         operation: rollbackState.operation,
-        fieldId: rollbackState.fieldId
+        fieldId: rollbackState.fieldId,
       });
 
       return { success: true, rollbackState };
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       // Log failed rollback
       getAuditLogger().logRollback(rollbackState.operation, false, {
         operationId,
         fieldId: rollbackState.fieldId,
-        error: errorMessage
+        error: errorMessage,
       });
 
       logger.error('Failed to rollback operation', {
         operationId,
         operation: rollbackState.operation,
         fieldId: rollbackState.fieldId,
-        error: errorMessage
+        error: errorMessage,
       });
 
       return { success: false, error: errorMessage, rollbackState };
@@ -316,8 +324,8 @@ export class RollbackManager {
    * Get rollback history
    */
   getRollbackHistory(): RollbackState[] {
-    return Array.from(this.rollbackStates.values()).sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    return Array.from(this.rollbackStates.values()).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
   }
 
@@ -327,7 +335,7 @@ export class RollbackManager {
   clearRollbackHistory(): void {
     const count = this.rollbackStates.size;
     this.rollbackStates.clear();
-    
+
     logger.info('Rollback history cleared', { clearedOperations: count });
   }
 
@@ -367,7 +375,7 @@ export class RollbackManager {
   private async restoreFieldValue(fieldId: string, value: string): Promise<void> {
     // This would integrate with the actual UI automation client to restore the value
     logger.debug('Restoring field value', { fieldId, valueLength: value.length });
-    
+
     // Simulate the restore operation
     await new Promise(resolve => setTimeout(resolve, 100));
   }
@@ -378,7 +386,7 @@ export class RollbackManager {
   private async clearField(fieldId: string): Promise<void> {
     // This would integrate with the actual UI automation client to clear the field
     logger.debug('Clearing field', { fieldId });
-    
+
     // Simulate the clear operation
     await new Promise(resolve => setTimeout(resolve, 50));
   }
@@ -394,8 +402,8 @@ export class RollbackManager {
     newestOperation?: string;
   } {
     const operations = Array.from(this.rollbackStates.values());
-    const sortedByTime = operations.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    const sortedByTime = operations.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
     return {
@@ -403,7 +411,7 @@ export class RollbackManager {
       dryRunMode: this.dryRunMode,
       maxHistorySize: this.maxRollbackHistory,
       oldestOperation: sortedByTime[0]?.timestamp,
-      newestOperation: sortedByTime[sortedByTime.length - 1]?.timestamp
+      newestOperation: sortedByTime[sortedByTime.length - 1]?.timestamp,
     };
   }
 }

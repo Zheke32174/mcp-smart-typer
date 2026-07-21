@@ -5,8 +5,13 @@
  */
 
 import { EventEmitter } from 'events';
-import AdvancedVisionEngine, { ScreenAnalysis, DetectedElement } from '../vision/advanced-vision-engine.js';
-import PrecisionInteractionEngine, { InteractionResult } from '../interaction/precision-interaction-engine.js';
+import AdvancedVisionEngine, {
+  ScreenAnalysis,
+  DetectedElement,
+} from '../vision/advanced-vision-engine.js';
+import PrecisionInteractionEngine, {
+  InteractionResult,
+} from '../interaction/precision-interaction-engine.js';
 
 export interface WorkflowStep {
   id: string;
@@ -21,11 +26,27 @@ export interface WorkflowStep {
   metadata: StepMetadata;
 }
 
-export type StepType = 
-  | 'detect-elements' | 'click' | 'type' | 'drag' | 'wait' | 'verify' 
-  | 'screenshot' | 'navigate' | 'scroll' | 'hover' | 'select'
-  | 'file-upload' | 'file-download' | 'data-extraction' | 'validation'
-  | 'branch' | 'loop' | 'parallel' | 'sequential' | 'custom';
+export type StepType =
+  | 'detect-elements'
+  | 'click'
+  | 'type'
+  | 'drag'
+  | 'wait'
+  | 'verify'
+  | 'screenshot'
+  | 'navigate'
+  | 'scroll'
+  | 'hover'
+  | 'select'
+  | 'file-upload'
+  | 'file-download'
+  | 'data-extraction'
+  | 'validation'
+  | 'branch'
+  | 'loop'
+  | 'parallel'
+  | 'sequential'
+  | 'custom';
 
 export interface ExecutionCondition {
   type: 'element-exists' | 'element-not-exists' | 'text-contains' | 'value-equals' | 'custom';
@@ -153,9 +174,15 @@ export interface WorkflowExecution {
   performance: ExecutionMetrics;
 }
 
-export type ExecutionStatus = 
-  | 'pending' | 'running' | 'paused' | 'completed' 
-  | 'failed' | 'cancelled' | 'timeout' | 'rollback';
+export type ExecutionStatus =
+  | 'pending'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'timeout'
+  | 'rollback';
 
 export interface ExecutionMetrics {
   totalSteps: number;
@@ -180,17 +207,17 @@ export class WorkflowOrchestrator extends EventEmitter {
   private visionEngine: AdvancedVisionEngine;
   private interactionEngine: PrecisionInteractionEngine;
   private stepExecutors = new Map<StepType, StepExecutor>();
-  
+
   constructor(
     visionEngine: AdvancedVisionEngine,
     interactionEngine: PrecisionInteractionEngine,
     private config: OrchestratorConfig = {}
   ) {
     super();
-    
+
     this.visionEngine = visionEngine;
     this.interactionEngine = interactionEngine;
-    
+
     this.initializeStepExecutors();
     this.setupEventHandlers();
   }
@@ -212,11 +239,11 @@ export class WorkflowOrchestrator extends EventEmitter {
 
   private setupEventHandlers(): void {
     // Listen to interaction engine events
-    this.interactionEngine.on('interaction-completed', (result) => {
+    this.interactionEngine.on('interaction-completed', result => {
       this.emit('step-interaction', result);
     });
 
-    this.interactionEngine.on('interaction-failed', (result) => {
+    this.interactionEngine.on('interaction-failed', result => {
       this.emit('step-interaction-failed', result);
     });
 
@@ -228,13 +255,13 @@ export class WorkflowOrchestrator extends EventEmitter {
 
   async loadWorkflow(definition: WorkflowDefinition): Promise<void> {
     console.log(`📋 Loading workflow: ${definition.name} v${definition.version}`);
-    
+
     // Validate workflow definition
     await this.validateWorkflowDefinition(definition);
-    
+
     // Store in library
     this.workflowLibrary.set(definition.id, definition);
-    
+
     console.log(`✅ Workflow loaded: ${definition.name}`);
     this.emit('workflow-loaded', definition);
   }
@@ -266,7 +293,7 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   async executeWorkflow(
-    workflowId: string, 
+    workflowId: string,
     variables: Record<string, any> = {},
     options: ExecutionOptions = {}
   ): Promise<WorkflowExecution> {
@@ -276,7 +303,7 @@ export class WorkflowOrchestrator extends EventEmitter {
     }
 
     const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     console.log(`🚀 Starting workflow execution: ${workflow.name} (${executionId})`);
 
     const execution: WorkflowExecution = {
@@ -292,11 +319,11 @@ export class WorkflowOrchestrator extends EventEmitter {
         errorHistory: [],
         startTime: Date.now(),
         currentTime: Date.now(),
-        metadata: options.metadata || {}
+        metadata: options.metadata || {},
       },
       results: [],
       startTime: Date.now(),
-      performance: this.initializeMetrics(workflow)
+      performance: this.initializeMetrics(workflow),
     };
 
     this.activeExecutions.set(executionId, execution);
@@ -305,22 +332,21 @@ export class WorkflowOrchestrator extends EventEmitter {
     try {
       // Execute workflow
       await this.runWorkflowSteps(workflow, execution, options);
-      
+
       execution.status = 'completed';
       execution.endTime = Date.now();
       execution.duration = execution.endTime - execution.startTime;
-      
+
       console.log(`✅ Workflow completed: ${workflow.name} in ${execution.duration}ms`);
       this.emit('execution-completed', execution);
-      
     } catch (error) {
       execution.status = 'failed';
       execution.endTime = Date.now();
       execution.duration = execution.endTime - execution.startTime;
-      
+
       console.error(`❌ Workflow failed: ${workflow.name}`, error);
       this.emit('execution-failed', execution, error);
-      
+
       // Handle rollback if configured
       if (workflow.settings.errorHandling === 'rollback') {
         await this.performRollback(workflow, execution);
@@ -336,7 +362,7 @@ export class WorkflowOrchestrator extends EventEmitter {
     options: ExecutionOptions
   ): Promise<void> {
     execution.status = 'running';
-    
+
     for (let i = 0; i < workflow.steps.length; i++) {
       const step = workflow.steps[i];
       execution.context.stepIndex = i;
@@ -366,20 +392,23 @@ export class WorkflowOrchestrator extends EventEmitter {
 
         // Execute step with retry logic
         const stepResult = await this.executeStepWithRetry(step, execution.context);
-        
+
         // Store result
         execution.context.stepResults.set(step.id, stepResult);
         execution.results.push(stepResult);
 
         // Evaluate success criteria
-        const successResult = await this.evaluateSuccessCriteria(step.successCriteria, stepResult, execution.context);
+        const successResult = await this.evaluateSuccessCriteria(
+          step.successCriteria,
+          stepResult,
+          execution.context
+        );
         if (!successResult.success) {
           throw new Error(`Step failed success criteria: ${successResult.reason}`);
         }
 
         console.log(`✅ Step completed: ${step.name} (${stepResult.duration}ms)`);
         this.emit('step-completed', execution, step, stepResult);
-
       } catch (error) {
         const stepError: WorkflowError = {
           stepId: step.id,
@@ -388,7 +417,7 @@ export class WorkflowOrchestrator extends EventEmitter {
           details: error,
           timestamp: Date.now(),
           recoverable: this.isErrorRecoverable(error, step),
-          suggested_action: this.getSuggestedAction(error, step)
+          suggested_action: this.getSuggestedAction(error, step),
         };
 
         execution.context.errorHistory.push(stepError);
@@ -402,16 +431,19 @@ export class WorkflowOrchestrator extends EventEmitter {
     }
   }
 
-  private async executeStepWithRetry(step: WorkflowStep, context: WorkflowContext): Promise<StepResult> {
+  private async executeStepWithRetry(
+    step: WorkflowStep,
+    context: WorkflowContext
+  ): Promise<StepResult> {
     const maxAttempts = step.retryPolicy.maxAttempts || 1;
     let lastError: any;
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const startTime = performance.now();
-      
+
       try {
         console.log(`🎯 Executing step: ${step.name} (attempt ${attempt}/${maxAttempts})`);
-        
+
         // Get step executor
         const executor = this.stepExecutors.get(step.type);
         if (!executor) {
@@ -425,7 +457,7 @@ export class WorkflowOrchestrator extends EventEmitter {
         );
 
         const endTime = performance.now();
-        
+
         const stepResult: StepResult = {
           stepId: step.id,
           success: true,
@@ -434,22 +466,23 @@ export class WorkflowOrchestrator extends EventEmitter {
           attempts: attempt,
           metadata: {
             executor: step.type,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           },
-          screenshots: await this.captureStepScreenshots(step, context)
+          screenshots: await this.captureStepScreenshots(step, context),
         };
 
         return stepResult;
-
       } catch (error) {
         lastError = error;
         const endTime = performance.now();
-        
+
         console.warn(`⚠️ Step attempt ${attempt} failed: ${step.name}`, error);
-        
+
         // Check if error is retryable
         if (attempt < maxAttempts && this.shouldRetryError(error, step.retryPolicy)) {
-          const delay = step.retryPolicy.delayMs * Math.pow(step.retryPolicy.backoffMultiplier || 1, attempt - 1);
+          const delay =
+            step.retryPolicy.delayMs *
+            Math.pow(step.retryPolicy.backoffMultiplier || 1, attempt - 1);
           console.log(`🔄 Retrying in ${delay}ms...`);
           await this.delay(delay);
           continue;
@@ -465,15 +498,15 @@ export class WorkflowOrchestrator extends EventEmitter {
             errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
             message: error instanceof Error ? error.message : 'Unknown error',
             timestamp: Date.now(),
-            recoverable: this.isErrorRecoverable(error, step)
+            recoverable: this.isErrorRecoverable(error, step),
           },
           duration: endTime - startTime,
           attempts: attempt,
           metadata: {
             executor: step.type,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           },
-          screenshots: await this.captureStepScreenshots(step, context)
+          screenshots: await this.captureStepScreenshots(step, context),
         };
 
         throw error;
@@ -503,7 +536,7 @@ export class WorkflowOrchestrator extends EventEmitter {
 
   private shouldRetryError(error: any, retryPolicy: RetryPolicy): boolean {
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError';
-    
+
     // Check if error type is in skipOn list
     if (retryPolicy.skipOn?.includes(errorType)) {
       return false;
@@ -520,7 +553,7 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   private async evaluateConditions(
-    conditions: ExecutionCondition[], 
+    conditions: ExecutionCondition[],
     context: WorkflowContext
   ): Promise<{ success: boolean; reason?: string }> {
     if (!conditions.length) {
@@ -538,30 +571,32 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   private async evaluateCondition(
-    condition: ExecutionCondition, 
+    condition: ExecutionCondition,
     context: WorkflowContext
   ): Promise<{ success: boolean; reason?: string }> {
-    
     switch (condition.type) {
       case 'element-exists':
         const element = context.detectedElements.get(condition.target!);
         return {
           success: !!element,
-          reason: element ? undefined : `Element not found: ${condition.target}`
+          reason: element ? undefined : `Element not found: ${condition.target}`,
         };
 
       case 'element-not-exists':
         const noElement = context.detectedElements.get(condition.target!);
         return {
           success: !noElement,
-          reason: noElement ? `Element exists: ${condition.target}` : undefined
+          reason: noElement ? `Element exists: ${condition.target}` : undefined,
         };
 
       case 'value-equals':
         const value = context.variables.get(condition.target!);
         return {
           success: value === condition.expected,
-          reason: value !== condition.expected ? `Expected ${condition.expected}, got ${value}` : undefined
+          reason:
+            value !== condition.expected
+              ? `Expected ${condition.expected}, got ${value}`
+              : undefined,
         };
 
       case 'custom':
@@ -570,12 +605,12 @@ export class WorkflowOrchestrator extends EventEmitter {
             const result = condition.evaluator(context);
             return {
               success: result,
-              reason: result ? undefined : 'Custom condition failed'
+              reason: result ? undefined : 'Custom condition failed',
             };
           } catch (error) {
             return {
               success: false,
-              reason: `Custom evaluator error: ${error instanceof Error ? error.message : 'Unknown error'}`
+              reason: `Custom evaluator error: ${error instanceof Error ? error.message : 'Unknown error'}`,
             };
           }
         }
@@ -587,8 +622,8 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   private async evaluateSuccessCriteria(
-    criteria: SuccessCriteria[], 
-    stepResult: StepResult, 
+    criteria: SuccessCriteria[],
+    stepResult: StepResult,
     context: WorkflowContext
   ): Promise<{ success: boolean; reason?: string }> {
     if (!criteria.length) {
@@ -606,11 +641,10 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   private async evaluateCriterion(
-    criterion: SuccessCriteria, 
-    stepResult: StepResult, 
+    criterion: SuccessCriteria,
+    stepResult: StepResult,
     context: WorkflowContext
   ): Promise<{ success: boolean; reason?: string }> {
-    
     switch (criterion.type) {
       case 'custom':
         if (criterion.validator) {
@@ -618,12 +652,12 @@ export class WorkflowOrchestrator extends EventEmitter {
             const result = criterion.validator(stepResult.result, context);
             return {
               success: result,
-              reason: result ? undefined : 'Custom validation failed'
+              reason: result ? undefined : 'Custom validation failed',
             };
           } catch (error) {
             return {
               success: false,
-              reason: `Custom validator error: ${error instanceof Error ? error.message : 'Unknown error'}`
+              reason: `Custom validator error: ${error instanceof Error ? error.message : 'Unknown error'}`,
             };
           }
         }
@@ -641,7 +675,6 @@ export class WorkflowOrchestrator extends EventEmitter {
     error: WorkflowError,
     options: ExecutionOptions
   ): Promise<void> {
-    
     switch (workflow.settings.errorHandling) {
       case 'stop':
         throw new Error(`Execution stopped due to error in step ${step.name}: ${error.message}`);
@@ -656,28 +689,32 @@ export class WorkflowOrchestrator extends EventEmitter {
 
       case 'rollback':
         await this.performRollback(workflow, execution);
-        throw new Error(`Execution rolled back due to error in step ${step.name}: ${error.message}`);
+        throw new Error(
+          `Execution rolled back due to error in step ${step.name}: ${error.message}`
+        );
     }
   }
 
-  private async performRollback(workflow: WorkflowDefinition, execution: WorkflowExecution): Promise<void> {
+  private async performRollback(
+    workflow: WorkflowDefinition,
+    execution: WorkflowExecution
+  ): Promise<void> {
     console.log(`🔄 Performing rollback for workflow: ${workflow.name}`);
     execution.status = 'rollback';
 
     // Execute rollback steps in reverse order
     const completedSteps = execution.results.filter(r => r.success);
-    
+
     for (const stepResult of completedSteps.reverse()) {
       const step = workflow.steps.find(s => s.id === stepResult.stepId);
       if (step?.rollbackStrategy.enabled) {
         try {
           console.log(`↩️ Rolling back step: ${step.name}`);
-          
+
           // Execute rollback steps
           for (const rollbackStep of step.rollbackStrategy.steps) {
             await this.executeStepWithRetry(rollbackStep, execution.context);
           }
-          
         } catch (rollbackError) {
           console.error(`❌ Rollback failed for step: ${step.name}`, rollbackError);
           // Continue with other rollbacks even if one fails
@@ -688,12 +725,15 @@ export class WorkflowOrchestrator extends EventEmitter {
     console.log(`✅ Rollback completed for workflow: ${workflow.name}`);
   }
 
-  private async captureStepScreenshots(step: WorkflowStep, context: WorkflowContext): Promise<string[]> {
+  private async captureStepScreenshots(
+    step: WorkflowStep,
+    context: WorkflowContext
+  ): Promise<string[]> {
     const screenshots: string[] = [];
-    
+
     // Capture based on workflow settings and step requirements
     // Implementation would depend on screenshot capture system
-    
+
     return screenshots;
   }
 
@@ -701,14 +741,14 @@ export class WorkflowOrchestrator extends EventEmitter {
     // Determine if error is recoverable based on error type and step configuration
     const nonRecoverableErrors = ['SecurityError', 'PermissionError', 'ValidationError'];
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError';
-    
+
     return !nonRecoverableErrors.includes(errorType);
   }
 
   private getSuggestedAction(error: any, step: WorkflowStep): string {
     // Provide intelligent suggestions based on error type and step type
     const errorType = error instanceof Error ? error.constructor.name : 'UnknownError';
-    
+
     switch (errorType) {
       case 'TimeoutError':
         return 'Increase step timeout or check if target element is available';
@@ -722,7 +762,7 @@ export class WorkflowOrchestrator extends EventEmitter {
   }
 
   private async waitForResume(execution: WorkflowExecution): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(resolve => {
       const resumeHandler = (executionId: string) => {
         if (executionId === execution.id) {
           execution.status = 'running';
@@ -730,7 +770,7 @@ export class WorkflowOrchestrator extends EventEmitter {
           resolve();
         }
       };
-      
+
       this.on('execution-resumed', resumeHandler);
     });
   }
@@ -746,9 +786,9 @@ export class WorkflowOrchestrator extends EventEmitter {
         memoryMB: 0,
         cpuPercent: 0,
         screenshotsMB: 0,
-        networkRequests: 0
+        networkRequests: 0,
       },
-      accuracy: 0
+      accuracy: 0,
     };
   }
 
@@ -756,14 +796,16 @@ export class WorkflowOrchestrator extends EventEmitter {
     for (const execution of this.activeExecutions.values()) {
       if (execution.status === 'running') {
         execution.performance.completedSteps = execution.results.filter(r => r.success).length;
-        execution.performance.successRate = execution.results.length > 0 
-          ? execution.performance.completedSteps / execution.results.length 
-          : 0;
+        execution.performance.successRate =
+          execution.results.length > 0
+            ? execution.performance.completedSteps / execution.results.length
+            : 0;
         execution.performance.totalDuration = Date.now() - execution.startTime;
-        execution.performance.averageStepDuration = execution.results.length > 0
-          ? execution.results.reduce((sum, r) => sum + r.duration, 0) / execution.results.length
-          : 0;
-        
+        execution.performance.averageStepDuration =
+          execution.results.length > 0
+            ? execution.results.reduce((sum, r) => sum + r.duration, 0) / execution.results.length
+            : 0;
+
         // Update resource usage
         const memUsage = process.memoryUsage();
         execution.performance.resourceUsage.memoryMB = memUsage.heapUsed / 1024 / 1024;
@@ -836,7 +878,7 @@ class ClickStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<InteractionResult> {
     const { target, button = 'left', clickType = 'single' } = step.parameters;
-    
+
     // Resolve target (could be element ID, coordinates, etc.)
     const element = context.detectedElements.get(target);
     if (!element) {
@@ -847,14 +889,14 @@ class ClickStepExecutor extends StepExecutor {
       x: element.bounds.x + element.bounds.width / 2,
       y: element.bounds.y + element.bounds.height / 2,
       timestamp: Date.now(),
-      confidence: element.confidence
+      confidence: element.confidence,
     };
 
     return this.interactionEngine.performPrecisionClick(interactionPoint, {
       button,
       clickType,
       humanLike: true,
-      verifyTarget: true
+      verifyTarget: true,
     });
   }
 }
@@ -866,11 +908,11 @@ class TypeStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<InteractionResult> {
     const { text, timing = 'realistic' } = step.parameters;
-    
+
     return this.interactionEngine.performAdvancedKeyboardInput({
       text,
       timing,
-      verification: true
+      verification: true,
     });
   }
 }
@@ -882,12 +924,12 @@ class DetectElementsStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<ScreenAnalysis> {
     const analysis = await this.visionEngine.analyzeScreen();
-    
+
     // Store detected elements in context
     for (const element of analysis.elements) {
       context.detectedElements.set(element.id, element);
     }
-    
+
     context.screenAnalysis = analysis;
     return analysis;
   }
@@ -907,7 +949,7 @@ class VerifyStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<boolean> {
     const { condition, target, expected } = step.parameters;
-    
+
     // Implement verification logic
     switch (condition) {
       case 'element-exists':
@@ -939,14 +981,14 @@ class DragStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<InteractionResult> {
     const { from, to, path = 'straight', speed = 'normal' } = step.parameters;
-    
+
     return this.interactionEngine.performAdvancedDrag({
       startPoint: from,
       endPoint: to,
       path,
       speed,
       acceleration: 'ease-in-out',
-      smoothing: true
+      smoothing: true,
     });
   }
 }
@@ -958,13 +1000,13 @@ class ScrollStepExecutor extends StepExecutor {
 
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<InteractionResult> {
     const { direction = 'down', amount = 3 } = step.parameters;
-    
+
     // Implement scroll using wheel or key events
     const scrollKey = direction === 'down' ? 'Page_Down' : 'Page_Up';
-    
+
     return this.interactionEngine.performAdvancedKeyboardInput({
       keys: [scrollKey],
-      timing: 'realistic'
+      timing: 'realistic',
     });
   }
 }
@@ -972,7 +1014,7 @@ class ScrollStepExecutor extends StepExecutor {
 class BranchStepExecutor extends StepExecutor {
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<string> {
     const { condition, trueStep, falseStep } = step.parameters;
-    
+
     // Evaluate branch condition and return next step
     // This is a simplified implementation
     return condition ? trueStep : falseStep;
@@ -982,11 +1024,11 @@ class BranchStepExecutor extends StepExecutor {
 class LoopStepExecutor extends StepExecutor {
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<number> {
     const { maxIterations = 10, condition } = step.parameters;
-    
+
     // Execute loop logic
     let iterations = 0;
     // Implementation would handle loop execution
-    
+
     return iterations;
   }
 }
@@ -994,7 +1036,7 @@ class LoopStepExecutor extends StepExecutor {
 class ParallelStepExecutor extends StepExecutor {
   async execute(step: WorkflowStep, context: WorkflowContext): Promise<any[]> {
     const { steps } = step.parameters;
-    
+
     // Execute steps in parallel
     const results = await Promise.all(
       steps.map((parallelStep: WorkflowStep) => {
@@ -1002,7 +1044,7 @@ class ParallelStepExecutor extends StepExecutor {
         return new Promise(resolve => resolve(null)); // Placeholder
       })
     );
-    
+
     return results;
   }
 }

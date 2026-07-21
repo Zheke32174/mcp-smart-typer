@@ -2,21 +2,20 @@
   "name": "mcp-smart-typer-monorepo",
   "version": "2.0.0",
   "private": true,
-  "description": "MCP Smart Typer - AI-powered typing automation with Windows UI integration",
+  "description": "Experimental MCP typing contracts, a mock TypeScript server, and Windows native-helper prototypes",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "format": "pnpm -r format",
-    "clean": "pnpm -r clean",
-    "typecheck": "pnpm -r typecheck",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "prepare-release": "node scripts/prepare-release.js",
-    "validate-cicd": "node scripts/validate-cicd.js",
-    "version": "npm run prepare-release"
+    "validate-cicd": "node scripts/validate-release-boundary.js"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -27,17 +26,16 @@
     "prettier": "^3.2.5",
     "typescript": "^5.3.3"
   },
-  "packageManager": "pnpm@8.15.0",
+  "packageManager": "npm@10.9.3",
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=22.0.0",
+    "npm": ">=10.9.3"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "ai",
-    "automation",
-    "typing",
+    "mock-server",
+    "schema-validation",
     "windows",
     "ui-automation"
   ],

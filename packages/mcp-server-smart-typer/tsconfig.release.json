@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "incremental": false,
+    "tsBuildInfoFile": null
+  },
+  "include": [
+    "src/index.ts",
+    "src/simple-server.ts",
+    "src/schemas/index.ts",
+    "src/utils/job-manager.ts",
+    "src/utils/logger.ts",
+    "src/utils/mock-native-client.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/enhanced-server.ts",
+    "src/grpc/**",
+    "src/interaction/**",
+    "src/ocr/**",
+    "src/orchestration/**",
+    "src/security/**",
+    "src/test/**",
+    "src/tools/**",
+    "src/vision/**"
+  ]
+}

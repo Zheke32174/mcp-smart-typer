@@ -35,7 +35,7 @@ export function createTestMCPClient(): TestMCPClient {
 
     async start() {
       console.log('Starting test MCP server...');
-      
+
       server = spawn('node', ['dist/index.js'], {
         cwd: join(process.cwd()),
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -43,8 +43,8 @@ export function createTestMCPClient(): TestMCPClient {
         env: {
           ...process.env,
           NODE_ENV: 'test',
-          LOG_LEVEL: 'error'
-        }
+          LOG_LEVEL: 'error',
+        },
       });
 
       if (!server) {
@@ -53,7 +53,7 @@ export function createTestMCPClient(): TestMCPClient {
 
       this.server = server;
 
-      server.stderr?.on('data', (data) => {
+      server.stderr?.on('data', data => {
         console.error('Server error:', data.toString());
       });
 
@@ -83,7 +83,7 @@ export function createTestMCPClient(): TestMCPClient {
         jsonrpc: '2.0',
         id: requestId++,
         method,
-        params
+        params,
       };
 
       return new Promise((resolve, reject) => {
@@ -111,7 +111,7 @@ export function createTestMCPClient(): TestMCPClient {
         server?.stdout?.on('data', handleResponse);
         server?.stdin?.write(JSON.stringify(request) + '\n');
       });
-    }
+    },
   };
 }
 
@@ -120,10 +120,10 @@ export function createTestMCPClient(): TestMCPClient {
  */
 export async function createTestPage(browser: Browser): Promise<Page> {
   const page = await browser.newPage();
-  
+
   // Set viewport for consistent testing
   await page.setViewportSize({ width: 1200, height: 800 });
-  
+
   return page;
 }
 
@@ -373,7 +373,7 @@ export function createMockNativeClient() {
           required: true,
           bounds: { x: 100, y: 150, width: 300, height: 40 },
           confidence: 0.95,
-          analysis_method: 'mock'
+          analysis_method: 'mock',
         },
         {
           id: 'field_password_002',
@@ -385,8 +385,8 @@ export function createMockNativeClient() {
           required: true,
           bounds: { x: 100, y: 200, width: 300, height: 40 },
           confidence: 0.92,
-          analysis_method: 'mock'
-        }
+          analysis_method: 'mock',
+        },
       ];
 
       return {
@@ -395,8 +395,8 @@ export function createMockNativeClient() {
           title: 'Test Login Page',
           className: 'Chrome_WidgetWin_1',
           handle: '12345',
-          bounds: { x: 0, y: 0, width: 1200, height: 800 }
-        }
+          bounds: { x: 0, y: 0, width: 1200, height: 800 },
+        },
       };
     },
 
@@ -408,7 +408,7 @@ export function createMockNativeClient() {
       // Simulate typing with realistic timing
       const delay = params.delay || 50;
       const simulatedTime = params.text.length * delay;
-      
+
       // Simulate some realistic scenarios
       if (params.fieldId === 'invalid_field') {
         throw new Error('Field not found');
@@ -418,22 +418,22 @@ export function createMockNativeClient() {
         success: true,
         charactersTyped: params.text.length,
         timeTaken: simulatedTime,
-        fieldId: params.fieldId
+        fieldId: params.fieldId,
       };
     },
 
     async getFieldValue(params: any) {
       // Return mock values for different fields
       const mockValues: Record<string, string> = {
-        'field_username_001': 'test@example.com',
-        'field_password_002': '***', // Masked password
-        'field_search_001': 'sample search query'
+        field_username_001: 'test@example.com',
+        field_password_002: '***', // Masked password
+        field_search_001: 'sample search query',
       };
 
       return {
         value: mockValues[params.fieldId] || '',
         fieldId: params.fieldId,
-        success: true
+        success: true,
       };
     },
 
@@ -441,16 +441,19 @@ export function createMockNativeClient() {
       return {
         success: true,
         fieldId: params.fieldId,
-        focused: true
+        focused: true,
       };
-    }
+    },
   };
 }
 
 /**
  * Waits for a condition to be true with timeout
  */
-export async function waitFor(condition: () => boolean | Promise<boolean>, timeout = 5000): Promise<void> {
+export async function waitFor(
+  condition: () => boolean | Promise<boolean>,
+  timeout = 5000
+): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (await condition()) {

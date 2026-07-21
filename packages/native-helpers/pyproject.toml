@@ -5,13 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mcp-smart-typer-native-helpers"
 version = "2.0.0"
-description = "Python gRPC service for Windows UI automation"
+description = "Experimental Python gRPC helpers for Windows UI automation"
 authors = [
-    {name = "MCP Smart Typer Team", email = "team@mcp-smart-typer.dev"}
+    {name = "MCP Smart Typer Team"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "grpcio>=1.59.0",
     "grpcio-tools>=1.59.0",
@@ -22,19 +22,24 @@ dependencies = [
     "protobuf>=4.21.0",
     "opencv-python>=4.8.0",
     "numpy>=1.24.0",
+    "pandas>=2.0.0",
     "pywinauto>=0.6.8",
     "uiautomation>=2.0.18",
+    "pywin32>=306; platform_system == 'Windows'",
+    "playwright>=1.40.0",
+    "lxml>=5.0.0",
+    "pytesseract>=0.3.10",
+    "psutil>=5.9.0",
+    "requests>=2.31.0",
     "PyInstaller>=6.0.0",
 ]
 keywords = ["mcp", "ui-automation", "windows", "grpc", "pyautogui"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -43,9 +48,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mcp-smart-typer/mcp-smart-typer"
-Repository = "https://github.com/mcp-smart-typer/mcp-smart-typer.git"
-Issues = "https://github.com/mcp-smart-typer/mcp-smart-typer/issues"
+Homepage = "https://github.com/Zheke32174/mcp-smart-typer"
+Repository = "https://github.com/Zheke32174/mcp-smart-typer.git"
+Issues = "https://github.com/Zheke32174/mcp-smart-typer/issues"
 
 [project.scripts]
 mcp-native-helpers = "src.main:main"
@@ -56,14 +61,18 @@ include = ["src*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py38']
+target-version = ['py310']
+extend-exclude = '''
+/src/generated/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 100
+skip_glob = ["src/generated/*"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

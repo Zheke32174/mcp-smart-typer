@@ -1,0 +1,40 @@
+name: Verify npm lock consistency
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'packages/*/package.json'
+      - '.github/workflows/npm-lock-diagnostics.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-smart-typer-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lock-report:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.x'
+      - name: Install exact npm
+        run: npm install --global npm@10.9.3
+      - name: Prove the committed lock is reproducible
+        run: |
+          set -euo pipefail
+          cp package-lock.json package-lock.before.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          cmp --silent package-lock.before.json package-lock.json || {
+            echo 'package-lock.json is not synchronized with the committed package metadata' >&2
+            git diff --no-index -- package-lock.before.json package-lock.json || true
+            exit 1
+          }
+          npm ci --ignore-scripts --no-audit --no-fund
