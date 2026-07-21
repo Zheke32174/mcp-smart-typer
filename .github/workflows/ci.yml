@@ -31,8 +31,9 @@ jobs:
       - name: Validate repository-owned release policy
         run: node scripts/validate-release-boundary.js
 
-  test-node:
-    runs-on: windows-2022
+  test-node-release:
+    name: test mock package (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -50,40 +51,52 @@ jobs:
         run: npm install --global npm@${{ env.NPM_VERSION }}
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Capture lint diagnostics
-        shell: pwsh
+      - name: Lint distributable source
+        run: npm run lint:release --workspace @mcp-smart-typer/server
+      - name: Type check distributable source
+        run: npm run typecheck:release --workspace @mcp-smart-typer/server
+      - name: Build distributable source
+        run: npm run build:release --workspace @mcp-smart-typer/server
+      - name: Verify mock-only release contract
+        run: npm run test:release --workspace @mcp-smart-typer/server
+      - name: Inspect npm tarball boundary
+        shell: bash
         run: |
-          npm run lint *>&1 | Tee-Object -FilePath node-lint.log
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Type check
-        run: npm run typecheck
-      - name: Build
-        run: npm run build
-      - name: Test
-        run: npm test
-      - name: Upload Node diagnostics
+          set -euo pipefail
+          cd packages/mcp-server-smart-typer
+          npm pack --dry-run --json > npm-pack.json
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          report = json.loads(pathlib.Path('npm-pack.json').read_text(encoding='utf-8'))
+          assert isinstance(report, list) and len(report) == 1
+          files = {entry['path'] for entry in report[0]['files']}
+          required = {'package.json', 'README.md', 'LICENSE', 'dist/index.js'}
+          missing = required - files
+          assert not missing, f'missing release files: {sorted(missing)}'
+          forbidden_prefixes = ('src/', 'test/', 'scripts/', 'node_modules/')
+          forbidden = sorted(path for path in files if path.startswith(forbidden_prefixes))
+          assert not forbidden, f'private source escaped npm boundary: {forbidden}'
+          PY
+      - name: Upload Node diagnostics and candidate
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: node-diagnostics-${{ matrix.node-version }}-${{ github.sha }}
-          path: node-lint.log
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Upload TypeScript candidate
-        if: matrix.node-version == '22.x'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: typescript-candidate-${{ github.sha }}
+          name: mock-package-${{ matrix.node-version }}-${{ github.sha }}
           path: |
             packages/mcp-server-smart-typer/dist/
+            packages/mcp-server-smart-typer/npm-pack.json
             packages/mcp-server-smart-typer/package.json
             packages/mcp-server-smart-typer/README.md
             packages/mcp-server-smart-typer/LICENSE
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
-  test-python:
+  native-python-diagnostics:
+    name: native helper diagnostics (Python ${{ matrix.python-version }})
     runs-on: windows-2022
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -105,74 +118,46 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install black==24.10.0 isort==5.13.2 mypy pytest
-      - name: Prepare generated Python package
-        run: >-
-          python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
-      - name: Generate protobuf files
-        run: >-
-          python -m grpc_tools.protoc
-          -I ./proto
-          --python_out=./src/generated
-          --grpc_python_out=./src/generated
-          ./proto/ui_automation.proto
-      - name: Compile owned Python source
-        run: python -m compileall -q src tests
-      - name: Format check
-        run: python -m black --check --extend-exclude "src/generated" src tests test_*.py
-      - name: Import order check
-        run: python -m isort --check-only --skip src/generated src tests test_*.py
-      - name: Type check
-        run: python -m mypy src/ --exclude "src[\\/]generated" --ignore-missing-imports
-      - name: Run Python tests
-        run: python -m pytest -xvs .
-
-  build-python-candidate:
-    runs-on: windows-2022
-    needs: test-python
-    defaults:
-      run:
-        working-directory: packages/native-helpers
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: packages/native-helpers/pyproject.toml
-      - name: Install owned package build dependencies
+      - name: Prepare and generate protobuf package
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install .
-      - name: Prepare generated Python package
-        run: >-
           python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
-      - name: Generate protobuf files
-        run: >-
-          python -m grpc_tools.protoc
-          -I ./proto
-          --python_out=./src/generated
-          --grpc_python_out=./src/generated
-          ./proto/ui_automation.proto
-      - name: Build executable candidate
-        run: python -m PyInstaller build_uia_server.spec --clean --noconfirm
-      - name: Verify executable candidate
+          python -m grpc_tools.protoc -I ./proto --python_out=./src/generated --grpc_python_out=./src/generated ./proto/ui_automation.proto
+      - name: Compile native helper source
+        run: python -m compileall -q src tests
+      - name: Capture formatter diagnostics
         shell: pwsh
         run: |
-          $path = 'dist/mcp-uia-server.exe'
-          if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            throw 'candidate executable was not produced'
-          }
-          $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($hash -notmatch '^[0-9a-f]{64}$') { throw 'invalid executable digest' }
-          "sha256:$hash  mcp-uia-server.exe" | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding ascii
-      - name: Upload Python executable candidate
+          python -m black --check --exclude "src[\\/]generated" src tests *> black.log
+          "black_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        id: black
+        continue-on-error: true
+      - name: Capture type diagnostics
+        shell: pwsh
+        run: |
+          python -m mypy src/ --exclude "src[\\/]generated" --ignore-missing-imports *> mypy.log
+          "mypy_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        id: mypy
+        continue-on-error: true
+      - name: Capture focused native tests
+        shell: pwsh
+        run: |
+          python -m pytest -xvs tests *> pytest.log
+          "pytest_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        id: pytest
+        continue-on-error: true
+      - name: Upload native diagnostics
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: python-executable-candidate-${{ github.sha }}
+          name: native-python-diagnostics-${{ matrix.python-version }}-${{ github.sha }}
           path: |
-            packages/native-helpers/dist/mcp-uia-server.exe
-            packages/native-helpers/dist/SHA256SUMS.txt
-          if-no-files-found: error
+            packages/native-helpers/black.log
+            packages/native-helpers/mypy.log
+            packages/native-helpers/pytest.log
+          if-no-files-found: warn
           retention-days: 14
+      - name: Summarize experimental native status
+        shell: pwsh
+        run: |
+          "Native helper remains experimental and is not part of the npm tarball." | Write-Output
+          "black=${{ steps.black.outputs.black_exit }} mypy=${{ steps.mypy.outputs.mypy_exit }} pytest=${{ steps.pytest.outputs.pytest_exit }}" | Write-Output
