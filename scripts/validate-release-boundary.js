@@ -27,11 +27,20 @@ function assert(condition, message) {
 const rootPackage = json('package.json');
 const packageLock = json('package-lock.json');
 const serverPackage = json('packages/mcp-server-smart-typer/package.json');
+const serverReadme = text('packages/mcp-server-smart-typer/README.md');
+const serverLicense = text('packages/mcp-server-smart-typer/LICENSE');
 const pyproject = text('packages/native-helpers/pyproject.toml');
 const ci = text('.github/workflows/ci.yml');
 const candidate = text('.github/workflows/release-candidate.yml');
 const preparation = text('scripts/prepare-release.js');
-const inspected = [JSON.stringify(serverPackage), pyproject, ci, candidate, preparation]
+const inspected = [
+  JSON.stringify(serverPackage),
+  serverReadme,
+  pyproject,
+  ci,
+  candidate,
+  preparation,
+]
   .join('\n')
   .toLowerCase();
 
@@ -60,11 +69,9 @@ for (const forbidden of [
   assert(!inspected.includes(forbidden), `false provenance remains: ${forbidden}`);
 }
 
-const pythonVersion = pyproject.match(/^version = "([^"]+)"$/m)?.[1];
-const versions = [rootPackage.version, serverPackage.version, pythonVersion];
 assert(
-  versions.every((value) => value && value === versions[0]),
-  `package versions differ: ${versions.join(', ')}`,
+  rootPackage.version && rootPackage.version === serverPackage.version,
+  `root and npm package versions differ: ${rootPackage.version}, ${serverPackage.version}`,
 );
 assert(
   rootPackage.packageManager === 'npm@10.9.3',
@@ -89,6 +96,26 @@ for (const [name, command] of Object.entries(rootPackage.scripts || {})) {
   assert(!String(command).includes('pnpm'), `root script ${name} still invokes pnpm`);
 }
 
+assert(serverLicense.startsWith('MIT License'), 'package-local MIT license is missing');
+assert(serverPackage.main === 'dist/index.js', 'npm main entry is not the bounded build');
+assert(serverPackage.bin?.['mcp-server-smart-typer'] === 'dist/index.js', 'npm bin entry is not bounded');
+assert(serverPackage.scripts?.['build:release'], 'bounded release build script is missing');
+assert(serverPackage.scripts?.['lint:release'], 'bounded release lint script is missing');
+assert(serverPackage.scripts?.['typecheck:release'], 'bounded release typecheck script is missing');
+assert(serverPackage.scripts?.['test:release'], 'mock-only release contract test is missing');
+const allowedRuntimeDependencies = new Set(['@modelcontextprotocol/sdk', 'zod']);
+for (const dependency of Object.keys(serverPackage.dependencies || {})) {
+  assert(allowedRuntimeDependencies.has(dependency), `native dependency escaped npm package: ${dependency}`);
+}
+for (const requiredFile of ['dist/', 'README.md', 'LICENSE']) {
+  assert((serverPackage.files || []).includes(requiredFile), `npm files allowlist omits ${requiredFile}`);
+}
+assert(serverReadme.includes('MockNativeClient'), 'package README does not disclose mock execution');
+assert(
+  serverReadme.includes('npm uninstall --global @mcp-smart-typer/server'),
+  'package removal instructions are missing',
+);
+
 assert(ci.includes('permissions:\n  contents: read'), 'ordinary CI is not read-only');
 for (const forbidden of [
   'publish-npm',
@@ -98,20 +125,46 @@ for (const forbidden of [
   'action-gh-release',
   '|| echo',
   'pnpm',
+  'PyInstaller',
 ]) {
   assert(!ci.includes(forbidden), `ordinary CI contains forbidden behavior: ${forbidden}`);
 }
 assert(!ci.includes("tags:\n      - 'v*'"), 'ordinary CI is also acting as the tag workflow');
-assert(ci.includes('npm ci'), 'ordinary CI does not install from package-lock.json');
-assert(ci.includes('python -m pytest -xvs .'), 'Python tests are not fail-closed');
-assert(ci.includes('if-no-files-found: error'), 'missing candidate outputs do not fail CI');
+assert(ci.includes('npm ci --ignore-scripts --no-audit --no-fund'), 'ordinary CI install is not bounded');
 assert(
-  ci.includes('node scripts/validate-release-boundary.js'),
-  'ordinary CI does not run the canonical policy validator',
+  ci.includes('npm run lint:release --workspace @mcp-smart-typer/server'),
+  'ordinary CI does not lint the bounded package',
 );
+assert(
+  ci.includes('npm run typecheck:release --workspace @mcp-smart-typer/server'),
+  'ordinary CI does not typecheck the bounded package',
+);
+assert(
+  ci.includes('npm run build:release --workspace @mcp-smart-typer/server'),
+  'ordinary CI does not build the bounded package',
+);
+assert(
+  ci.includes('npm run test:release --workspace @mcp-smart-typer/server'),
+  'ordinary CI does not verify the mock-only contract',
+);
+assert(ci.includes('npm pack --dry-run --json'), 'ordinary CI does not inspect the npm tarball');
+assert(ci.includes('node scripts/validate-release-boundary.js'), 'ordinary CI does not run policy validation');
 assert(ci.includes('node-version: [22.x, 24.x]'), 'ordinary CI must test maintained Node LTS lines');
+assert(ci.includes('continue-on-error: true'), 'native diagnostics are incorrectly release-blocking');
+assert(
+  ci.includes('Native helper remains experimental and is not part of the npm tarball.'),
+  'native diagnostic boundary is not explicit',
+);
+assert(ci.includes('python -m pytest -xvs tests'), 'focused native tests are not recorded');
+assert(ci.includes('if-no-files-found: error'), 'missing npm candidate output does not fail CI');
 
 assert(candidate.includes("tags:\n      - 'v*'"), 'candidate workflow is not tag-only');
+assert(candidate.includes("NODE_VERSION: '22.x'"), 'candidate workflow does not use maintained Node LTS');
+assert(candidate.includes("NPM_VERSION: '10.9.3'"), 'candidate workflow does not use the locked npm');
+assert(
+  candidate.includes('git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main'),
+  'candidate tag is not restricted to commits reachable from main',
+);
 assert(
   candidate.includes("os.environ['GITHUB_REF_NAME'] != f'v{version}'"),
   'candidate tag is not bound to package version',
@@ -124,17 +177,40 @@ assert(
   candidate.includes("'publication_authority': 'none'"),
   'candidate receipt claims publication authority',
 );
+assert(candidate.includes("'native_helper_included': False"), 'candidate receipt does not exclude native helper');
 assert(candidate.includes("'package_lock_sha256'"), 'candidate receipt is not bound to package-lock.json');
-assert(candidate.includes('npm ci'), 'candidate workflow does not install from package-lock.json');
+assert(candidate.includes("'package_manifest_sha256'"), 'candidate receipt is not bound to package manifest');
+assert(candidate.includes('npm ci --ignore-scripts --no-audit --no-fund'), 'candidate install is not bounded');
 assert(
-  candidate.includes('node scripts/validate-release-boundary.js'),
-  'candidate workflow does not run the canonical policy validator',
+  candidate.includes('npm run lint:release --workspace @mcp-smart-typer/server'),
+  'candidate does not lint the bounded package',
 );
-for (const forbidden of ['npm publish', 'action-gh-release', 'secrets.NPM_TOKEN', 'pnpm']) {
-  assert(!candidate.includes(forbidden), `candidate workflow contains forbidden behavior: ${forbidden}`);
-}
+assert(
+  candidate.includes('npm run typecheck:release --workspace @mcp-smart-typer/server'),
+  'candidate does not typecheck the bounded package',
+);
+assert(
+  candidate.includes('npm run build:release --workspace @mcp-smart-typer/server'),
+  'candidate does not build the bounded package',
+);
+assert(
+  candidate.includes('npm run test:release --workspace @mcp-smart-typer/server'),
+  'candidate does not verify the mock-only contract',
+);
+assert(candidate.includes('npm pack --json'), 'candidate workflow does not create an inspected npm tarball');
 for (const required of ['SHA256SUMS.txt', 'BUILD-RECEIPT.json']) {
   assert(candidate.includes(required), `candidate workflow does not emit ${required}`);
+}
+for (const forbidden of [
+  'npm publish',
+  'action-gh-release',
+  'secrets.NPM_TOKEN',
+  'pnpm',
+  'setup-python',
+  'native-helpers',
+  'PyInstaller',
+]) {
+  assert(!candidate.includes(forbidden), `candidate workflow contains retired behavior: ${forbidden}`);
 }
 
 for (const required of [
@@ -154,7 +230,6 @@ const expectedActions = [
   'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
   'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065',
   'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
-  'actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093',
 ];
 for (const action of expectedActions) {
   assert(ci.includes(action) || candidate.includes(action), `pinned action missing: ${action}`);
@@ -175,5 +250,5 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  'PASS: owned provenance, one npm lock, supported runtimes, explicit preparation, fail-closed tests, read-only CI, pinned actions, and candidate-only tags',
+  'PASS: owned provenance, package-local license, bounded mock tarball, supported runtimes, read-only CI, nonblocking native diagnostics, immutable actions, and tag-only npm candidates',
 );

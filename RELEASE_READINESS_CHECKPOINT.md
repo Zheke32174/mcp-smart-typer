@@ -6,10 +6,13 @@ Draft pull request: `#4`
 Default branch changed: no  
 Registry publication authority: none
 
-## Last reviewed heads
+## Last reviewed heads and receipts
 
 - Prior exact-head diagnostics: `c449266a47b1b5650c32d5994b0b348e2f8eabbd`
 - Mock-only npm boundary repair: `ed089f1e04bae3c861f92151e6ecbe89c49b1ee4`
+- Last reviewed ledger head: `b266975372f726c605f105d4e17740a6b32fe601`
+- Exact-head CI run: `29828726516`
+- npm lock-consistency run: `29828726558`
 - Successful broad normalization run: `29792815675`
 - Successful Python boundary repair run: `29800085160`
 - Successful runtime-validation repair run: `29812734653`
@@ -32,47 +35,50 @@ Registry publication authority: none
 - Reduced npm runtime dependencies to the MCP SDK and Zod; native OCR, browser, gRPC, TensorFlow, and image dependencies no longer enter the mock package.
 - Added `tsconfig.release.json` covering only `index.ts`, `simple-server.ts`, schemas, and the three mock/runtime utilities.
 - Added a mock-only release contract test and an `npm pack --dry-run --json` archive-boundary check.
-- Moved strict Node release validation to Linux Node 22/24 to eliminate Windows checkout conversion as a false lint signal.
+- Moved strict Node release validation to Linux Node 22/24.
 - Retained Windows Python 3.10/3.11/3.12 checks as nonblocking experimental diagnostics with uploaded Black, mypy, and pytest evidence.
-- Removed the native executable build from the npm release gate; it requires a separate future artifact policy and live Windows validation.
-- Refreshed `package-lock.json`, formatted the bounded TypeScript surface, removed unused response-schema imports, ran lint/typecheck/build/contract tests, published one coherent repair commit, and removed the temporary writer.
+- Removed the native executable build from the npm release gate.
+- Added the package-local MIT license required by the declared tarball contract.
+- Replaced the stale unified tag workflow with a tag-only npm candidate workflow that excludes the native helper, rejects tags not reachable from `main`, creates checksums and a source-bound receipt, and has no publication authority.
+- Added practical local candidate installation, update, rollback, and removal instructions without implying registry availability.
+- Updated the canonical policy validator to enforce the split architecture rather than requiring the experimental native subsystem to pass or ship with the npm package.
 
 ## Validation receipts
 
-At head `c449266a47b1b5650c32d5994b0b348e2f8eabbd`:
+At head `b266975372f726c605f105d4e17740a6b32fe601`:
 
-- release policy passed;
 - npm lock consistency passed;
-- Python source compilation passed on 3.10, 3.11, and 3.12;
-- Node lint reached source and produced durable artifacts;
-- Node failures contained 10,685 cross-platform CRLF findings, one invalid rule identity, and remaining legacy-module lint debt;
-- Python formatting still included Windows checkout/generated-file noise;
-- mypy reported 380 errors in the experimental native implementation;
-- pytest collection failed in a legacy top-level demonstration class because an instance decorator was used as a class decorator.
+- source-normalization diagnostics passed;
+- bounded npm source lint passed on Node 22 and 24;
+- bounded npm source typecheck passed on Node 22 and 24;
+- bounded npm build passed on Node 22 and 24;
+- the mock-only release contract passed on Node 22 and 24;
+- native helper source compiled and its nonblocking diagnostics were preserved on Python 3.10, 3.11, and 3.12;
+- npm tarball inspection failed only because the package directory lacked its declared `LICENSE` file;
+- canonical policy validation failed because it still required the retired unified native release model.
 
-These diagnostics changed the release decision: the native helper cannot honestly gate or ship inside the mock npm package.
-
-The one-shot mock-boundary transaction at head `ed089f1e04bae3c861f92151e6ecbe89c49b1ee4` completed its internal npm lock refresh, formatting, release lint, release typecheck, release build, contract test, patch check, branch publication, and self-removal. Its bot-authored head produced `action_required` placeholders with zero jobs, so this ledger commit supplies the normal exact-head CI trigger.
+These receipts narrow the npm implementation debt to packaging and policy consistency. They are not registry or publication approval.
 
 ## External practices applied
 
 - npm package allowlisting through `package.json#files`; npm otherwise defaults to broad inclusion.
+- Package-local README and LICENSE inclusion verified against the actual `npm pack` file list.
 - Full-SHA Action references and least-privilege read-only validation.
 - Node 22 and 24 LTS release testing; Node 20 is EOL as of March 24, 2026.
-- Repository-level LF normalization consistent with Prettier's Git-oriented line-ending guidance.
 - Separate release gates for a distributable package and an experimental platform-specific subsystem.
 - Candidate-only builds until package ownership and a separately reviewed trusted-publishing workflow exist.
+- Trusted publishing remains deferred; current npm guidance requires Node `22.14.0+`, npm `11.5.1+`, and an explicitly configured OIDC publisher.
 
 Primary references:
 
 - https://docs.npmjs.com/files/package.json/
+- https://docs.npmjs.com/trusted-publishers/
 - https://docs.github.com/en/actions/reference/security/secure-use
 - https://nodejs.org/en/about/previous-releases
-- https://prettier.io/docs/options#end-of-line
 
 ## Open blockers
 
-1. The mock npm package requires a green non-bot exact-head receipt for Node 22 and 24: lock install, bounded lint, bounded typecheck, bounded build, contract test, and tarball inspection.
+1. The new package-license, policy, and tag-candidate boundary requires one green non-bot exact-head CI receipt.
 2. Package-registry ownership and availability of `@mcp-smart-typer/server` remain unverified.
 3. No npm trusted publisher is configured and no publication workflow is approved.
 4. The native Windows helper remains experimental: mypy debt, test debt, unauthenticated transport, no disposable interaction receipt, and no approved standalone artifact policy.
@@ -91,4 +97,4 @@ Reprocess this repository only when the draft head, exact-head CI or diagnostic 
 
 ## Next action
 
-Inspect CI triggered by this ledger commit. If Node 22/24 passes, retain `HOLD` only for registry ownership and publication authority. If it fails, repair only the exact bounded mock-package defect on this same branch. Treat native Python findings as a separate experimental-hardening backlog rather than npm release failures.
+Inspect CI triggered by the coherent package-license, policy, candidate-workflow, README, and ledger commit. If Node 22/24, policy, lock, contract, and tarball checks pass, retain `HOLD` only for registry ownership and publication authority. Treat native Python findings as a separate experimental-hardening backlog rather than npm release failures.

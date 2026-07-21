@@ -1,4 +1,4 @@
-name: Build verified release candidate
+name: Build verified npm release candidate
 
 on:
   push:
@@ -13,9 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '20.x'
-  PYTHON_VERSION: '3.11'
-  NPM_VERSION: '10.8.2'
+  NODE_VERSION: '22.x'
+  NPM_VERSION: '10.9.3'
 
 jobs:
   verify-identity:
@@ -24,38 +23,51 @@ jobs:
       version: ${{ steps.identity.outputs.version }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ env.NODE_VERSION }}
       - id: identity
-        name: Verify tag, package versions, and repository identity
+        name: Verify tag, package version, ancestry, and repository identity
         shell: bash
         run: |
           set -euo pipefail
           node scripts/validate-release-boundary.js
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main || {
+            echo 'tagged commit is not reachable from main' >&2
+            exit 1
+          }
           python3 - <<'PY'
-          import json, pathlib, re, os
+          import json
+          import os
+          import pathlib
+
           root = json.loads(pathlib.Path('package.json').read_text(encoding='utf-8'))
-          server = json.loads(pathlib.Path('packages/mcp-server-smart-typer/package.json').read_text(encoding='utf-8'))
-          pyproject = pathlib.Path('packages/native-helpers/pyproject.toml').read_text(encoding='utf-8')
-          match = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
-          if not match:
-              raise SystemExit('Python package version is missing')
-          versions = {root['version'], server['version'], match.group(1)}
+          server = json.loads(
+              pathlib.Path('packages/mcp-server-smart-typer/package.json').read_text(encoding='utf-8')
+          )
+          versions = {root['version'], server['version']}
           if len(versions) != 1:
-              raise SystemExit(f'version mismatch: {sorted(versions)}')
+              raise SystemExit(f'npm package version mismatch: {sorted(versions)}')
           version = versions.pop()
           if os.environ['GITHUB_REF_NAME'] != f'v{version}':
-              raise SystemExit(f'tag {os.environ["GITHUB_REF_NAME"]} does not match v{version}')
+              raise SystemExit(
+                  f'tag {os.environ["GITHUB_REF_NAME"]} does not match v{version}'
+              )
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
               handle.write(f'version={version}\n')
           PY
 
-  node-candidate:
-    runs-on: windows-2022
+  npm-candidate:
+    runs-on: ubuntu-24.04
     needs: verify-identity
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -64,120 +76,95 @@ jobs:
       - name: Install exact npm and locked dependencies
         run: |
           npm install --global npm@${{ env.NPM_VERSION }}
-          npm ci
-      - name: Verify and build TypeScript package
+          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify bounded mock package
         run: |
-          npm run lint
-          npm run typecheck
-          npm test
-          npm run build
-      - name: Create npm package candidate
-        shell: pwsh
+          npm run lint:release --workspace @mcp-smart-typer/server
+          npm run typecheck:release --workspace @mcp-smart-typer/server
+          npm run build:release --workspace @mcp-smart-typer/server
+          npm run test:release --workspace @mcp-smart-typer/server
+      - name: Create and inspect npm package candidate
+        shell: bash
         run: |
-          New-Item -ItemType Directory -Force -Path release-node | Out-Null
-          Push-Location packages/mcp-server-smart-typer
-          try {
-            npm pack --pack-destination ../../release-node
-          } finally {
-            Pop-Location
-          }
-          $packages = @(Get-ChildItem -LiteralPath release-node -Filter '*.tgz' -File)
-          if ($packages.Count -ne 1) { throw "expected one npm candidate, found $($packages.Count)" }
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: node-release-candidate-${{ github.sha }}
-          path: release-node/*.tgz
-          if-no-files-found: error
-          retention-days: 30
+          set -euo pipefail
+          mkdir -p release-candidate
+          (
+            cd packages/mcp-server-smart-typer
+            npm pack --json --pack-destination ../../release-candidate > ../../release-candidate/npm-pack.json
+          )
+          python3 - <<'PY'
+          import json
+          import pathlib
 
-  python-candidate:
-    runs-on: windows-2022
-    needs: verify-identity
-    defaults:
-      run:
-        working-directory: packages/native-helpers
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: packages/native-helpers/requirements.txt
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install black isort mypy pytest pyinstaller
-      - name: Generate protobuf files
-        run: >-
-          python -m grpc_tools.protoc
-          -I ./proto
-          --python_out=./src/generated
-          --grpc_python_out=./src/generated
-          ./proto/ui_automation.proto
-      - name: Verify Python source
-        run: |
-          python -m black --check .
-          python -m isort --check-only .
-          python -m mypy src/ --ignore-missing-imports
-          python -m pytest -xvs .
-      - name: Build executable candidate
-        run: python -m PyInstaller build_uia_server.spec --clean --noconfirm
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: python-release-candidate-${{ github.sha }}
-          path: packages/native-helpers/dist/mcp-uia-server.exe
-          if-no-files-found: error
-          retention-days: 30
-
-  receipt:
-    runs-on: ubuntu-24.04
-    needs: [verify-identity, node-candidate, python-candidate]
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          pattern: '*-release-candidate-${{ github.sha }}'
-          path: release-candidate
-          merge-multiple: true
+          candidate = pathlib.Path('release-candidate')
+          report = json.loads((candidate / 'npm-pack.json').read_text(encoding='utf-8'))
+          if not isinstance(report, list) or len(report) != 1:
+              raise SystemExit('npm pack did not produce exactly one candidate')
+          files = {entry['path'] for entry in report[0]['files']}
+          required = {'package.json', 'README.md', 'LICENSE', 'dist/index.js'}
+          missing = required - files
+          if missing:
+              raise SystemExit(f'missing release files: {sorted(missing)}')
+          forbidden_prefixes = ('src/', 'test/', 'scripts/', 'node_modules/')
+          forbidden = sorted(path for path in files if path.startswith(forbidden_prefixes))
+          if forbidden:
+              raise SystemExit(f'private source escaped npm boundary: {forbidden}')
+          tarballs = list(candidate.glob('*.tgz'))
+          if len(tarballs) != 1:
+              raise SystemExit(f'expected one tarball, found {len(tarballs)}')
+          PY
       - name: Create checksums and exact-source receipt
         shell: bash
         env:
           VERSION: ${{ needs.verify-identity.outputs.version }}
         run: |
           set -euo pipefail
-          find release-candidate -maxdepth 1 -type f -print0 | sort -z | xargs -0 sha256sum > release-candidate/SHA256SUMS.txt
+          cd release-candidate
+          sha256sum -- *.tgz > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+          cd ..
           python3 - <<'PY'
-          import hashlib, json, os, pathlib, platform
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import platform
+
           root = pathlib.Path('.')
           candidate = root / 'release-candidate'
           files = []
           for path in sorted(candidate.iterdir()):
-              if not path.is_file() or path.name in {'BUILD-RECEIPT.json', 'SHA256SUMS.txt'}:
+              if not path.is_file() or path.name == 'BUILD-RECEIPT.json':
                   continue
               data = path.read_bytes()
-              files.append({'name': path.name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+              files.append(
+                  {'name': path.name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+              )
           lock = root / 'package-lock.json'
+          manifest = root / 'packages/mcp-server-smart-typer/package.json'
           receipt = {
-              'schema': 'mcp-smart-typer.build-receipt/v1',
+              'schema': 'mcp-smart-typer.build-receipt/v2',
               'version': os.environ['VERSION'],
               'tag': os.environ['GITHUB_REF_NAME'],
               'source_commit': os.environ['GITHUB_SHA'],
               'repository': 'https://github.com/Zheke32174/mcp-smart-typer',
               'package_name': '@mcp-smart-typer/server',
               'package_lock_sha256': hashlib.sha256(lock.read_bytes()).hexdigest(),
+              'package_manifest_sha256': hashlib.sha256(manifest.read_bytes()).hexdigest(),
               'runner_os': platform.platform(),
               'artifacts': files,
               'publication_authority': 'none',
-              'notes': 'Candidate artifacts only; this workflow does not publish npm packages or create a GitHub Release.',
+              'native_helper_included': False,
+              'notes': 'Candidate tarball only; this workflow does not publish to npm or create a GitHub Release.',
           }
           (candidate / 'BUILD-RECEIPT.json').write_text(
-              json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n', encoding='utf-8'
+              json.dumps(receipt, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
           )
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: verified-release-candidate-${{ github.ref_name }}-${{ github.sha }}
+          name: verified-npm-candidate-${{ github.ref_name }}-${{ github.sha }}
           path: release-candidate/
           if-no-files-found: error
           retention-days: 30

@@ -6,7 +6,7 @@ A schema-validated **development/mock MCP server** for testing the MCP Smart Typ
 
 This package is a release candidate, not an approved registry release. The current entry point uses `MockNativeClient`; it does not type into or inspect the host desktop.
 
-The separate Python package under `packages/native-helpers` contains experimental Windows UI-automation implementations. That native surface is not yet connected to this package through a verified production transport.
+The separate Python package under `packages/native-helpers` contains experimental Windows UI-automation implementations. That native surface is not connected to this package through a verified production transport and is not part of the npm candidate.
 
 ## Tools
 
@@ -19,19 +19,43 @@ The mock server exposes:
 
 Inputs are validated with Zod and returned over MCP stdio. Mock responses are intended for client integration, schema validation, and safe development.
 
-## Build from source
+## Build and verify from source
 
 From the repository root:
 
 ```powershell
-npm install --global npm@10.8.2
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
+npm install --global npm@10.9.3
+npm ci --ignore-scripts --no-audit --no-fund
+npm run lint:release --workspace @mcp-smart-typer/server
+npm run typecheck:release --workspace @mcp-smart-typer/server
+npm run build:release --workspace @mcp-smart-typer/server
+npm run test:release --workspace @mcp-smart-typer/server
 node packages/mcp-server-smart-typer/dist/index.js
 ```
+
+## Candidate package lifecycle
+
+Create and inspect a local candidate without publishing it:
+
+```powershell
+cd packages/mcp-server-smart-typer
+npm pack --dry-run --json
+npm pack
+```
+
+Install that reviewed tarball locally:
+
+```powershell
+npm install --global ./mcp-smart-typer-server-2.0.0.tgz
+```
+
+Update by retaining the prior tarball, verifying the new candidate, and installing the new tarball over it. Roll back by reinstalling the retained prior tarball. Remove the package with:
+
+```powershell
+npm uninstall --global @mcp-smart-typer/server
+```
+
+No registry installation command is documented until package ownership and publication authority are approved.
 
 ## Package contents
 
@@ -42,12 +66,7 @@ A candidate tarball is restricted to:
 - `LICENSE`
 - `package.json` and npm-required metadata
 
-Inspect it before any publication decision:
-
-```powershell
-cd packages/mcp-server-smart-typer
-npm pack --dry-run
-```
+Source files, tests, scripts, lockfiles, and `node_modules` must not enter the tarball.
 
 ## Security boundary
 
@@ -63,4 +82,4 @@ Do not send secrets or sensitive field contents to the mock server. Do not treat
 
 ## License
 
-MIT.
+MIT. See `LICENSE` in this package.
