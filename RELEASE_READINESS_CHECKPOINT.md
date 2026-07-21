@@ -6,78 +6,69 @@ Draft pull request: `#4`
 Default branch changed: no  
 Registry publication authority: none
 
-## Last reviewed head
+## Last reviewed heads
 
-- Head before this checkpoint: `3734652d608b3b0564a40d3f1a3e9e7371c3c888`
-- Coherent release-boundary checkpoint: `be000476841d07daf8054ffbd4e1f0e494ab450a`
-- Repaired and normalized source head: `74158dc93db9c421102b6e036e676448732dc251`
-- Successful one-shot repair run: `29792815675`
+- Release-boundary checkpoint: `be000476841d07daf8054ffbd4e1f0e494ab450a`
+- Broad normalization head: `74158dc93db9c421102b6e036e676448732dc251`
+- Exact Python boundary repair: `67915a9cc0e195e04afe451fb761204fd60d4cca`
+- Successful broad normalization run: `29792815675`
+- Successful Python boundary repair run: `29800085160`
 
 ## Completed scope
 
 - Replaced false upstream npm provenance with repository-owned package metadata.
-- Removed ordinary-main-push publication.
+- Removed ordinary-main-push publication and kept publication authority absent.
 - Made Python and Node failures visible instead of converting them to success.
-- Kept third-party Actions bound to full commit identities.
+- Bound third-party Actions to full commit identities and removed persisted checkout credentials from read-only CI.
 - Built tag-bound npm and Windows executable candidates without publishing them.
 - Added exact candidate checksums and a source-bound build receipt.
 - Restricted the npm candidate tarball to declared runtime files.
 - Replaced the public npm entry point's self-granting security-control surface with the four-tool mock development server.
 - Corrected public installation, package-name, capability, performance, support, and security claims.
 - Added a repository security-reporting boundary.
-- Repaired the serialized tail in `standalone_production_demo.py`.
-- Declared the missing pandas dependency in both authoritative and compatibility dependency files.
-- Excluded generated protobuf output from formatter authority while retaining regeneration in CI.
-- Normalized every parsable owned Python file and applied Prettier plus safe ESLint autofixes to the TypeScript surface.
-- Aligned the mock server's self-reported version with package version `2.0.0`.
-- Removed the temporary write-capable normalization workflow after its successful commit.
+- Repaired the serialized tail in `standalone_production_demo.py` and declared the pandas dependency.
+- Removed illegal `U+001E` control bytes from `ui_automation.py`.
+- Made TensorFlow an optional accelerator; the documented rule-based classifier remains importable when TensorFlow is absent.
+- Excluded generated protobuf output from formatter and mypy authority while retaining regeneration and package compilation in CI.
+- Normalized owned Python and TypeScript source and aligned the mock server's self-reported version with package version `2.0.0`.
+- Replaced EOL Node 18/20 validation with supported Node 22/24 LTS validation and npm `10.9.3`.
+- Added durable Node lint diagnostics to failed exact-head runs.
+- Removed both temporary write-capable repair workflows after their successful commits.
 
 ## Validation receipts
 
-At checkpoint head `be000476841d07daf8054ffbd4e1f0e494ab450a`:
+Broad repair run `29792815675` passed exact checkout, serialized-tail decoding, parsable-Python normalization, locked Node installation, TypeScript formatting and safe autofixes, mock-version alignment, compilation, patch hygiene, self-removal, and branch publication.
 
-- release-policy validation passed;
-- npm lock consistency passed;
-- Python CI failed honestly at the expected pre-normalization formatting gate;
-- Node CI failed honestly at the expected pre-normalization lint gate.
+Python boundary repair run `29800085160` passed exact checkout, UI control-byte repair, optional-TensorFlow conversion, targeted Black/isort normalization, exact-file compilation, patch hygiene, self-removal, and branch publication.
 
-Repair run `29792815675` then passed every stage:
-
-- exact branch checkout;
-- serialized Python-tail decoding;
-- parsable-Python normalization;
-- locked Node dependency installation;
-- TypeScript formatting and safe autofixes;
-- mock-server version alignment;
-- repaired-source compilation and patch-hygiene checks;
-- self-removal and publication of one normalization commit.
-
-A fresh read-only CI receipt is required for the post-repair head. Repair success is not a release approval.
+The bot-authored repair head produced `action_required` placeholders with zero jobs. This ledger update intentionally supplies a normal exact-head trigger. Repair success is not a release approval.
 
 ## External practices applied
 
-- npm package allowlisting through `package.json#files`, rather than relying on the default all-files pack behavior.
-- repository-exact npm metadata and a public scoped-package access declaration.
-- full-SHA Action references and least-privilege read-only validation.
-- mock-by-default execution until an authenticated native transport exists.
-- candidate-only builds until a separately reviewed trusted-publishing workflow and registry configuration exist.
+- npm package allowlisting through `package.json#files`; npm otherwise defaults to broad package inclusion.
+- Repository-exact npm metadata and a public scoped-package access declaration.
+- Full-SHA Action references and least-privilege read-only validation.
+- Supported LTS runtimes only; Node.js marks 18 and 20 EOL and identifies 22 and 24 as LTS as of July 2026.
+- Mock-by-default execution until an authenticated native transport exists.
+- Candidate-only builds until a separately reviewed trusted-publishing workflow and registry configuration exist.
 
 Primary references:
 
-- npm `package.json` file-selection rules: https://docs.npmjs.com/files/package.json/
-- npm trusted publishing: https://docs.npmjs.com/trusted-publishers/
-- GitHub Actions secure-use reference: https://docs.github.com/en/actions/reference/security/secure-use
+- https://docs.npmjs.com/files/package.json/
+- https://docs.npmjs.com/trusted-publishers/
+- https://docs.github.com/en/actions/reference/security/secure-use
+- https://nodejs.org/en/about/previous-releases
+- https://nodejs.org/en/about/eol
 
 ## Open blockers
 
-1. Node lint, typecheck, build, and tests require a green exact post-repair receipt.
-2. Python formatting, import ordering, mypy, tests, and executable build require a green exact post-repair receipt.
-3. Any malformed Python files skipped by salvage formatting must be named and repaired from the next diagnostic receipt.
-4. The native Windows transport is not authenticated or integrated with the npm entry point.
-5. No disposable Windows interaction receipt proves safe live UI automation.
-6. No npm trusted publisher is configured, and no publication workflow is approved.
-7. No package-registry ownership or availability check has been recorded for `@mcp-smart-typer/server`.
-8. Administrative branch/ruleset and private-vulnerability-reporting settings are not source-verifiable.
+1. Node lint, typecheck, build, and tests require a green exact-head receipt on Node 22 and 24.
+2. Python compile, formatting, import ordering, mypy, tests, and executable build require a green exact-head receipt.
+3. The native Windows transport is not authenticated or integrated with the npm entry point.
+4. No disposable Windows interaction receipt proves safe live UI automation.
+5. No npm trusted publisher is configured, and no publication workflow is approved.
+6. No package-registry ownership or availability check has been recorded for `@mcp-smart-typer/server`.
+7. Administrative branch/ruleset and private-vulnerability-reporting settings are not source-verifiable.
 
 ## Deferred work
 
@@ -88,16 +79,8 @@ Primary references:
 
 ## Reconsideration triggers
 
-Reprocess this repository when any of the following changes:
-
-- draft branch head;
-- CI, diagnostic, dependency, or advisory status;
-- package name or registry ownership;
-- native transport design;
-- public capability or performance claims;
-- release workflow authority;
-- explicit steward instruction.
+Reprocess this repository only when the draft head, CI/diagnostic/advisory state, package ownership, native transport, public claims, release authority, or explicit steward instruction changes.
 
 ## Next action
 
-Inspect CI triggered by this ledger update. Repair only the exact remaining post-normalization failures on the same draft branch. Keep the repository on `HOLD` until both language surfaces are green and the package remains mock-only by default.
+Inspect CI triggered by this ledger update. Use the uploaded Node lint artifact and Python diagnostics to repair only exact remaining failures on this same draft branch. Keep the repository on `HOLD` until both language surfaces are green and the package remains mock-only by default.
