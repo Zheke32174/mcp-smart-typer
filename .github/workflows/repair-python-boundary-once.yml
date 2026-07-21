@@ -27,24 +27,20 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
-      - name: Remove illegal control bytes from owned Python source
+      - name: Remove illegal control bytes from UI automation
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
 
-          changed = []
-          for path in sorted(Path('packages/native-helpers').rglob('*.py')):
-              if 'generated' in path.parts:
-                  continue
-              payload = path.read_bytes()
-              repaired = payload.replace(b'\x1e', b'>')
-              if repaired != payload:
-                  repaired.decode('utf-8')
-                  compile(repaired, str(path), 'exec')
-                  path.write_bytes(repaired)
-                  changed.append(str(path))
-          print('repaired control-byte files:', changed)
+          path = Path('packages/native-helpers/src/ui_automation.py')
+          payload = path.read_bytes()
+          repaired = payload.replace(b'\x1e', b'>')
+          if repaired == payload:
+              raise SystemExit('expected UI automation control bytes were not present')
+          repaired.decode('utf-8')
+          compile(repaired, str(path), 'exec')
+          path.write_bytes(repaired)
           PY
       - name: Make TensorFlow an explicit optional accelerator
         run: |
@@ -69,14 +65,13 @@ jobs:
           compile(text, str(path), 'exec')
           path.write_text(text, encoding='utf-8', newline='\n')
           PY
-      - name: Normalize repaired Python source
+      - name: Normalize and verify repaired files
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check black==24.10.0 isort==5.13.2
-          cd packages/native-helpers
-          python -m black --extend-exclude 'src/generated' src tests test_*.py
-          python -m isort --skip src/generated src tests test_*.py
-          python -m compileall -q src tests
+          python -m black packages/native-helpers/src/ui_automation.py packages/native-helpers/src/vision_classifier.py
+          python -m isort packages/native-helpers/src/ui_automation.py packages/native-helpers/src/vision_classifier.py
+          python -m py_compile packages/native-helpers/src/ui_automation.py packages/native-helpers/src/vision_classifier.py
       - name: Remove workflow and publish exact repair
         run: |
           set -euo pipefail
