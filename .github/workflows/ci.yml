@@ -14,15 +14,17 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '22.x'
   PYTHON_VERSION: '3.11'
-  NPM_VERSION: '10.8.2'
+  NPM_VERSION: '10.9.3'
 
 jobs:
   policy:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -34,9 +36,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [22.x, 24.x]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: ${{ matrix.node-version }}
@@ -45,17 +49,28 @@ jobs:
       - name: Install exact npm
         run: npm install --global npm@${{ env.NPM_VERSION }}
       - name: Install locked dependencies
-        run: npm ci
-      - name: Lint
-        run: npm run lint
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Capture lint diagnostics
+        shell: pwsh
+        run: |
+          npm run lint *>&1 | Tee-Object -FilePath node-lint.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Type check
         run: npm run typecheck
       - name: Build
         run: npm run build
       - name: Test
         run: npm test
+      - name: Upload Node diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: node-diagnostics-${{ matrix.node-version }}-${{ github.sha }}
+          path: node-lint.log
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload TypeScript candidate
-        if: matrix.node-version == '20.x'
+        if: matrix.node-version == '22.x'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: typescript-candidate-${{ github.sha }}
@@ -78,6 +93,8 @@ jobs:
         working-directory: packages/native-helpers
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python-version }}
@@ -87,7 +104,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install black isort mypy pytest
+          python -m pip install black==24.10.0 isort==5.13.2 mypy pytest
       - name: Prepare generated Python package
         run: >-
           python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
@@ -98,12 +115,14 @@ jobs:
           --python_out=./src/generated
           --grpc_python_out=./src/generated
           ./proto/ui_automation.proto
+      - name: Compile owned Python source
+        run: python -m compileall -q src tests
       - name: Format check
-        run: python -m black --check .
+        run: python -m black --check --extend-exclude "src/generated" src tests test_*.py
       - name: Import order check
-        run: python -m isort --check-only .
+        run: python -m isort --check-only --skip src/generated src tests test_*.py
       - name: Type check
-        run: python -m mypy src/ --ignore-missing-imports
+        run: python -m mypy src/ --exclude "src[\\/]generated" --ignore-missing-imports
       - name: Run Python tests
         run: python -m pytest -xvs .
 
@@ -115,6 +134,8 @@ jobs:
         working-directory: packages/native-helpers
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ env.PYTHON_VERSION }}
