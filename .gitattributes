@@ -1,0 +1,12 @@
+# Keep release inputs byte-stable across Linux and Windows runners.
+* text=auto eol=lf
+
+# Preserve binary assets.
+*.gif binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.pdf binary
+*.exe binary
+*.dll binary
