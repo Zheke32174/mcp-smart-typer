@@ -1,4 +1,4 @@
-name: Verify source and build candidates
+name: Verify bounded npm source and candidates
 
 on:
   push:
@@ -15,7 +15,6 @@ concurrency:
 
 env:
   NODE_VERSION: '22.x'
-  PYTHON_VERSION: '3.11'
   NPM_VERSION: '10.9.3'
 
 jobs:
@@ -111,74 +110,5 @@ jobs:
             packages/mcp-server-smart-typer/package.json
             packages/mcp-server-smart-typer/README.md
             packages/mcp-server-smart-typer/LICENSE
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
-
-  native-python-diagnostics:
-    name: native helper diagnostics (Python ${{ matrix.python-version }})
-    runs-on: windows-2022
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.10', '3.11', '3.12']
-    defaults:
-      run:
-        working-directory: packages/native-helpers
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: packages/native-helpers/pyproject.toml
-      - name: Install owned package and test tools
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e .
-          python -m pip install black==24.10.0 isort==5.13.2 mypy pytest
-      - name: Prepare and generate protobuf package
-        run: |
-          python -c "from pathlib import Path; p=Path('src/generated'); p.mkdir(parents=True, exist_ok=True); (p/'__init__.py').touch()"
-          python -m grpc_tools.protoc -I ./proto --python_out=./src/generated --grpc_python_out=./src/generated ./proto/ui_automation.proto
-      - name: Compile native helper source
-        run: python -m compileall -q src tests
-      - name: Capture formatter diagnostics
-        shell: pwsh
-        run: |
-          python -m black --check --exclude "src[\\/]generated" src tests *> black.log
-          "black_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        id: black
-        continue-on-error: true
-      - name: Capture type diagnostics
-        shell: pwsh
-        run: |
-          python -m mypy src/ --exclude "src[\\/]generated" --ignore-missing-imports *> mypy.log
-          "mypy_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        id: mypy
-        continue-on-error: true
-      - name: Capture focused native tests
-        shell: pwsh
-        run: |
-          python -m pytest -xvs tests *> pytest.log
-          "pytest_exit=$LASTEXITCODE" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-        id: pytest
-        continue-on-error: true
-      - name: Upload native diagnostics
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: native-python-diagnostics-${{ matrix.python-version }}-${{ github.sha }}
-          path: |
-            packages/native-helpers/black.log
-            packages/native-helpers/mypy.log
-            packages/native-helpers/pytest.log
-          if-no-files-found: warn
-          retention-days: 14
-      - name: Summarize experimental native status
-        shell: pwsh
-        run: |
-          "Native helper remains experimental and is not part of the npm tarball." | Write-Output
-          "black=${{ steps.black.outputs.black_exit }} mypy=${{ steps.mypy.outputs.mypy_exit }} pytest=${{ steps.pytest.outputs.pytest_exit }}" | Write-Output

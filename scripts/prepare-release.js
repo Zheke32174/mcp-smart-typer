@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Prepare one reviewable version change.
+ * Prepare one reviewable npm-package version change.
  *
- * This script updates version fields and emits a preparation receipt. It does
- * not create tags, publish packages, create releases, generate claims, or grant
- * publication authority.
+ * This script updates the monorepo and mock npm package version fields and emits
+ * a preparation receipt. The experimental Python native helper has an
+ * independent lifecycle and is intentionally not versioned by this command.
+ *
+ * This script does not create tags, publish packages, create releases, generate
+ * compatibility claims, or grant publication authority.
  */
 
 const crypto = require('crypto');
@@ -107,12 +110,10 @@ if (!/^[0-9a-f]{40}$/.test(sourceCommit)) fail('HEAD is not one exact commit ide
 
 const rootPath = 'package.json';
 const serverPath = 'packages/mcp-server-smart-typer/package.json';
-const pythonPath = 'packages/native-helpers/pyproject.toml';
 const receiptPath = 'release-preparation.v1.json';
 
 const rootPackage = readJson(rootPath);
 const serverPackage = readJson(serverPath);
-const pythonBefore = fs.readFileSync(path.join(root, pythonPath), 'utf8');
 
 if (serverPackage.name !== '@mcp-smart-typer/server') {
   fail('npm package ownership is not @mcp-smart-typer/server');
@@ -120,53 +121,45 @@ if (serverPackage.name !== '@mcp-smart-typer/server') {
 if (serverPackage.repository?.url !== expectedRepository) {
   fail('npm package repository identity is not the owned GitHub repository');
 }
-if (!pythonBefore.includes('github.com/Zheke32174/mcp-smart-typer')) {
-  fail('Python package repository identity is not the owned GitHub repository');
-}
 
-const currentPythonMatch = pythonBefore.match(/^version = "([^"]+)"$/m);
-if (!currentPythonMatch) fail('Python project version field is missing or ambiguous');
-const currentVersions = [rootPackage.version, serverPackage.version, currentPythonMatch[1]];
+const currentVersions = [rootPackage.version, serverPackage.version];
 if (!currentVersions.every((value) => value === currentVersions[0])) {
-  fail(`current package versions disagree: ${currentVersions.join(', ')}`);
+  fail(`current npm package versions disagree: ${currentVersions.join(', ')}`);
 }
 if (currentVersions[0] === targetVersion) fail(`version is already ${targetVersion}`);
 
 rootPackage.version = targetVersion;
 serverPackage.version = targetVersion;
-const pythonAfter = pythonBefore.replace(
-  /^version = "[^"]+"$/m,
-  `version = "${targetVersion}"`,
-);
-if (pythonAfter === pythonBefore) fail('Python project version was not changed');
 
 atomicWrite(path.join(root, rootPath), `${JSON.stringify(rootPackage, null, 2)}\n`);
 atomicWrite(path.join(root, serverPath), `${JSON.stringify(serverPackage, null, 2)}\n`);
-atomicWrite(path.join(root, pythonPath), pythonAfter);
 
 const receipt = {
-  schema: 'mcp-smart-typer.release-preparation/v1',
+  schema: 'mcp-smart-typer.release-preparation/v2',
   sourceCommit,
   previousVersion: currentVersions[0],
   targetVersion,
   repository: 'https://github.com/Zheke32174/mcp-smart-typer',
   packageName: '@mcp-smart-typer/server',
   authority: 'none',
-  files: [rootPath, serverPath, pythonPath].map((file) => ({
+  nativeHelperVersionChanged: false,
+  files: [rootPath, serverPath].map((file) => ({
     path: file,
     sha256: digestFile(file),
   })),
   requiredNextSteps: [
-    'review the complete diff',
-    'run npm run validate-cicd and the full Node and Python test matrices',
-    'commit the reviewed version change',
+    'review the complete npm-package diff',
+    'run npm run validate-cicd and the maintained Node release matrix',
+    'review native-helper diagnostics separately only when native-helper inputs changed',
+    'commit the reviewed npm-package version change',
     'create an exact matching version tag only after review',
     'review the candidate receipt before any separate publication decision',
   ],
 };
 atomicWrite(path.join(root, receiptPath), canonicalJson(receipt));
 
-console.log(`Prepared reviewable version change ${currentVersions[0]} -> ${targetVersion}`);
+console.log(`Prepared reviewable npm package version change ${currentVersions[0]} -> ${targetVersion}`);
 console.log(`Source commit: ${sourceCommit}`);
 console.log(`Receipt: ${receiptPath}`);
+console.log('The experimental native-helper version was not changed.');
 console.log('No tag, package publication, GitHub Release, or compatibility claim was created.');
