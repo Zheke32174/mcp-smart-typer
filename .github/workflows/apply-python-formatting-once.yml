@@ -1,4 +1,4 @@
-name: Repair and normalize Python source once
+name: Repair and normalize source once
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: mcp-smart-typer-python-normalization-once
+  group: mcp-smart-typer-source-normalization-once
   cancel-in-progress: false
 
 jobs:
@@ -24,7 +24,10 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
-      - name: Repair the serialized source tail and normalize Python
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20.x'
+      - name: Repair and normalize the owned source
         shell: bash
         run: |
           set -euo pipefail
@@ -48,6 +51,13 @@ jobs:
             cd packages/native-helpers
             python -m black src test_*.py
             python -m isort src test_*.py
+          )
+          npm install --global npm@10.8.2
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx prettier --write "packages/mcp-server-smart-typer/src/**/*.ts"
+          (
+            cd packages/mcp-server-smart-typer
+            npx eslint "src/**/*.ts" --fix || true
           )
           python3 - <<'PY'
           from pathlib import Path
@@ -74,5 +84,5 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Repair and normalize Python source'
+          git commit -m 'Repair and normalize owned source'
           git push origin "HEAD:${TARGET_BRANCH}"
