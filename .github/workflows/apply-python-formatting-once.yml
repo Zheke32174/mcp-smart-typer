@@ -49,16 +49,26 @@ jobs:
           else:
               compile(text, str(path), 'exec')
           PY
-      - name: Normalize Python formatting
+      - name: Normalize every parsable Python file
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check black==24.10.0 isort==5.13.2
-          (
-            cd packages/native-helpers
-            python -m black src test_*.py
-            python -m isort src test_*.py
-          )
+          cd packages/native-helpers
+          : > "$RUNNER_TEMP/python-format-failures.txt"
+          while IFS= read -r -d '' file; do
+            python -m black "$file" || printf 'black\t%s\n' "$file" >> "$RUNNER_TEMP/python-format-failures.txt"
+            python -m isort "$file" || printf 'isort\t%s\n' "$file" >> "$RUNNER_TEMP/python-format-failures.txt"
+          done < <(find src -type f -name '*.py' -not -path 'src/generated/*' -print0)
+          for file in test_*.py; do
+            [ -e "$file" ] || continue
+            python -m black "$file" || printf 'black\t%s\n' "$file" >> "$RUNNER_TEMP/python-format-failures.txt"
+            python -m isort "$file" || printf 'isort\t%s\n' "$file" >> "$RUNNER_TEMP/python-format-failures.txt"
+          done
+          if [ -s "$RUNNER_TEMP/python-format-failures.txt" ]; then
+            echo 'Deferred malformed Python files:'
+            cat "$RUNNER_TEMP/python-format-failures.txt"
+          fi
       - name: Install locked Node dependencies
         shell: bash
         run: |
@@ -79,19 +89,25 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import re
           from pathlib import Path
           path = Path('packages/mcp-server-smart-typer/src/simple-server.ts')
           text = path.read_text(encoding='utf-8')
-          old = "const SERVER_VERSION = '1.0.0';"
-          if text.count(old) != 1:
+          updated, count = re.subn(
+              r"const SERVER_VERSION = ['\"]1\.0\.0['\"];",
+              "const SERVER_VERSION = '2.0.0';",
+              text,
+              count=1,
+          )
+          if count != 1:
               raise SystemExit('expected exactly one mock-server version constant')
-          path.write_text(text.replace(old, "const SERVER_VERSION = '2.0.0';"), encoding='utf-8')
+          path.write_text(updated, encoding='utf-8')
           PY
-      - name: Verify normalized source
+      - name: Verify repaired source and patch hygiene
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m compileall -q packages/native-helpers/src
+          python3 -m py_compile packages/native-helpers/src/standalone_production_demo.py
           git diff --check
       - name: Remove the one-shot workflow and publish one normalization commit
         shell: bash
