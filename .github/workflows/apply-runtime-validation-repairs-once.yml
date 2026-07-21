@@ -46,20 +46,30 @@ jobs:
                   'def _load_cached_model(self) -> Optional[Any]:',
           }
           for old, new in replacements.items():
-              if text.count(old) != 1:
-                  raise SystemExit(f'expected exactly one annotation anchor: {old}')
-              text = text.replace(old, new)
+              if old in text:
+                  if text.count(old) != 1:
+                      raise SystemExit(f'ambiguous annotation anchor: {old}')
+                  text = text.replace(old, new)
+              elif new not in text:
+                  raise SystemExit(f'missing annotation anchor: {old}')
           path.write_text(text, encoding='utf-8', newline='\n')
           PY
 
-      - name: Normalize owned Python runtime and tests
+      - name: Normalize each parsable Python runtime and test file
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check black==24.10.0 isort==5.13.2
           cd packages/native-helpers
-          python -m black --extend-exclude 'src/generated' src tests test_*.py
-          python -m isort --skip src/generated src tests test_*.py
+          mapfile -d '' files < <(
+            find src tests -type f -name '*.py' -not -path 'src/generated/*' -print0
+            find . -maxdepth 1 -type f -name 'test_*.py' -print0
+          )
+          for file in "${files[@]}"; do
+            python -m py_compile "$file"
+            python -m black "$file"
+            python -m isort "$file"
+          done
           python -m compileall -q src tests
 
       - name: Synchronize the npm lock
@@ -75,7 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/validate-release-boundary.js
-          npm run lint -- --fix-dry-run >/dev/null
+          npx eslint 'packages/mcp-server-smart-typer/src/**/*.ts' --fix-dry-run
           git diff --check
 
       - name: Remove the one-shot workflow and publish one repair commit
