@@ -37,7 +37,7 @@ class VisionFieldClassifier:
         "checkbox",
     ]
 
-    def __init__(self, model_cache_dir: str = None):
+    def __init__(self, model_cache_dir: Optional[str] = None):
         """Initialize vision classifier.
 
         Args:
@@ -115,7 +115,7 @@ class VisionFieldClassifier:
 
         return model
 
-    def _load_cached_model(self) -> Optional[tf.keras.Model]:
+    def _load_cached_model(self) -> Optional[Any]:
         """Load cached model from disk.
 
         Returns:
