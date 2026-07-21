@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '20.x'
-      - name: Repair and normalize the owned source
+      - name: Decode serialized Python source tail
         shell: bash
         run: |
           set -euo pipefail
@@ -49,19 +49,35 @@ jobs:
           else:
               compile(text, str(path), 'exec')
           PY
+      - name: Normalize Python formatting
+        shell: bash
+        run: |
+          set -euo pipefail
           python -m pip install --disable-pip-version-check black==24.10.0 isort==5.13.2
           (
             cd packages/native-helpers
             python -m black src test_*.py
             python -m isort src test_*.py
           )
+      - name: Install locked Node dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
           npm install --global npm@10.8.2
           npm ci --ignore-scripts --no-audit --no-fund
+      - name: Normalize TypeScript formatting and safe autofixes
+        shell: bash
+        run: |
+          set -euo pipefail
           npx prettier --write "packages/mcp-server-smart-typer/src/**/*.ts"
           (
             cd packages/mcp-server-smart-typer
             npx eslint "src/**/*.ts" --fix || true
           )
+      - name: Align mock server version
+        shell: bash
+        run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           path = Path('packages/mcp-server-smart-typer/src/simple-server.ts')
@@ -71,7 +87,11 @@ jobs:
               raise SystemExit('expected exactly one mock-server version constant')
           path.write_text(text.replace(old, "const SERVER_VERSION = '2.0.0';"), encoding='utf-8')
           PY
-          python3 -m compileall -q packages/native-helpers/src packages/native-helpers/tests
+      - name: Verify normalized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q packages/native-helpers/src
           git diff --check
       - name: Remove the one-shot workflow and publish one normalization commit
         shell: bash
