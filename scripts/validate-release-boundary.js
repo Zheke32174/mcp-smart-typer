@@ -192,7 +192,7 @@ for (const required of [
   'nativeHelperVersionChanged: false',
   "runGit(['status', '--porcelain=v1', '--untracked-files=all'])",
   "runGit(['rev-parse', '--verify', 'HEAD'])",
-  'release-preparation.v2',
+  'release-preparation/v2',
   'The experimental native-helper version was not changed.',
 ]) {
   assert(preparation.includes(required), `release preparation invariant missing: ${required}`);
