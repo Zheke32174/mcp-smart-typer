@@ -2,7 +2,7 @@
   "name": "mcp-smart-typer-monorepo",
   "version": "2.0.0",
   "private": true,
-  "description": "MCP Smart Typer - AI-powered typing automation with Windows UI integration",
+  "description": "Experimental MCP typing contracts, a mock TypeScript server, and Windows native-helper prototypes",
   "workspaces": [
     "packages/*"
   ],
@@ -34,9 +34,8 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "ai",
-    "automation",
-    "typing",
+    "mock-server",
+    "schema-validation",
     "windows",
     "ui-automation"
   ],

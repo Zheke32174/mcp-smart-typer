@@ -1,18 +1,30 @@
 {
   "name": "@mcp-smart-typer/server",
   "version": "2.0.0",
-  "description": "MCP server for AI-powered typing automation with Windows UI integration",
+  "description": "Schema-validated development MCP server with a mock Windows UI adapter",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
     "mcp-server-smart-typer": "dist/index.js"
   },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx --watch src/simple-server.ts",
     "dev:enhanced": "tsx --watch src/enhanced-server.ts",
-    "start": "tsx src/simple-server.ts",
+    "start": "node dist/index.js",
+    "start:dev": "tsx src/simple-server.ts",
     "start:enhanced": "tsx src/enhanced-server.ts",
     "test": "jest",
     "test:e2e": "tsx src/test/run-e2e-tests.ts",
@@ -56,12 +68,10 @@
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "ai",
-    "automation",
-    "typing",
+    "mock-server",
+    "schema-validation",
     "windows",
-    "ui-automation",
-    "grpc"
+    "ui-automation"
   ],
   "author": "MCP Smart Typer Team",
   "license": "MIT",
@@ -77,5 +87,8 @@
     "url": "https://github.com/Zheke32174/mcp-smart-typer/issues"
   },
   "homepage": "https://github.com/Zheke32174/mcp-smart-typer#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "mcpSpecVersion": "1.0.0"
 }

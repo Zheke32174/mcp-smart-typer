@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mcp-smart-typer-native-helpers"
 version = "2.0.0"
-description = "Python gRPC service for Windows UI automation"
+description = "Experimental Python gRPC helpers for Windows UI automation"
 authors = [
     {name = "MCP Smart Typer Team"}
 ]
@@ -22,6 +22,7 @@ dependencies = [
     "protobuf>=4.21.0",
     "opencv-python>=4.8.0",
     "numpy>=1.24.0",
+    "pandas>=2.0.0",
     "pywinauto>=0.6.8",
     "uiautomation>=2.0.18",
     "pywin32>=306; platform_system == 'Windows'",
@@ -34,7 +35,7 @@ dependencies = [
 ]
 keywords = ["mcp", "ui-automation", "windows", "grpc", "pyautogui"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
@@ -61,10 +62,14 @@ include = ["src*"]
 [tool.black]
 line-length = 100
 target-version = ['py310']
+extend-exclude = '''
+/src/generated/
+'''
 
 [tool.isort]
 profile = "black"
 line_length = 100
+skip_glob = ["src/generated/*"]
 
 [tool.mypy]
 python_version = "3.10"

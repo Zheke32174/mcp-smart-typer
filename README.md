@@ -1,84 +1,98 @@
 # MCP Smart Typer
 
-🚀 **Advanced MCP Smart Typer with Windows UI automation, OCR, and intelligent field detection**
+MCP Smart Typer is an experimental Windows-oriented MCP automation repository. The repository currently contains two distinct surfaces:
 
-## 🌟 Features
+1. a schema-validated **development/mock MCP server** in TypeScript; and
+2. experimental Python Windows UI-automation helpers that are built and tested separately.
 
-- **Multi-Modal Field Detection**: Combines Windows UIA, OCR, and computer vision
-- **Intelligent Typing**: Human-like typing patterns with safety controls
-- **Browser Integration**: Playwright-powered web automation
-- **Security First**: Comprehensive audit logging and permission controls
-- **Performance Optimized**: Sub-millisecond response times with caching
+## Release status
 
-## 🚀 Quick Start
+**No npm or Python package release is currently approved.** The active GitHub draft builds review candidates only. It does not publish to npm, PyPI, or GitHub Releases.
 
-```bash
-# Install the MCP server
-npm install -g mcp-server-smart-typer
+The npm entry point intentionally uses `MockNativeClient`. It does not control the host desktop. The Python native-helper package contains Windows automation experiments, but that native path is not yet bound to the npm server through a verified production contract.
 
-# Install Python dependencies
-pip install -r packages/native-helpers/requirements.txt
+## What is implemented
 
-# Start the service
-npm start
-```
+The development MCP server exposes mock-backed versions of:
 
-## 📖 Documentation
+- `detect_fields`
+- `type_text`
+- `get_field_value`
+- `focus_field`
 
-- [Installation Guide](docs/INSTALLATION.md)
-- [API Reference](docs/API.md)
-- [Security Guide](docs/SECURITY.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
+Requests are validated with Zod and responses are returned over MCP stdio. The mock adapter is useful for schema, client-integration, and safety-boundary testing without issuing real keyboard or mouse input.
 
-## 🏗️ Architecture
+The repository also contains Python prototypes for UI Automation, OCR, browser automation, and executable packaging. Those components remain experimental and require a Windows validation receipt before they may be described as production-ready.
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   MCP Client    │───▶│  TypeScript      │───▶│  Python Native  │
-│   (Claude, etc) │    │  MCP Server      │    │  UI Automation  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+## Build and validate from source
 
-## 🔧 Development
+Requirements:
 
-```bash
-# Install dependencies
-npm install
-cd packages/native-helpers && pip install -r requirements.txt
+- Windows Server 2022 or Windows 10/11 for the full native-helper test surface
+- Node.js 18 or 20
+- npm 10.8.2
+- Python 3.10–3.12
 
-# Run tests
+```powershell
+git clone https://github.com/Zheke32174/mcp-smart-typer.git
+cd mcp-smart-typer
+
+npm install --global npm@10.8.2
+npm ci
+npm run lint
+npm run typecheck
 npm test
-
-# Build
 npm run build
 ```
 
-## 📊 Performance
+Run the built mock MCP server:
 
-- **Mouse Control**: < 1ms precision
-- **Typing Speed**: ~91 chars/second
-- **Field Detection**: 100% accuracy with fallback
-- **Memory Usage**: < 50MB baseline
+```powershell
+node packages/mcp-server-smart-typer/dist/index.js
+```
 
-## 🛡️ Security
+Validate the Python package:
 
-- Comprehensive audit logging
-- Permission-based access control
-- Data redaction for sensitive fields
-- Rollback capabilities for safety
+```powershell
+cd packages/native-helpers
+python -m pip install -e .
+python -m black --check .
+python -m isort --check-only .
+python -m mypy src/ --ignore-missing-imports
+python -m pytest -xvs .
+```
 
-## 📄 License
+## Candidate packaging
 
-MIT License - see [LICENSE](LICENSE) file for details.
+The release-candidate workflow verifies one matching version across the monorepo, npm package, Python package, and `v<version>` tag. It produces candidate artifacts and a checksum/source receipt but has **no publication authority**.
 
-## 🤝 Contributing
+The intended npm package identity is:
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+```text
+@mcp-smart-typer/server
+```
 
----
+Do not use older documentation that refers to `mcp-server-smart-typer` or the unrelated `modelcontextprotocol` organization as this repository's package owner.
 
-**Built with ❤️ for intelligent automation**
+## Security boundary
+
+- The distributed TypeScript entry point is mock-backed.
+- The npm package must not claim live Windows automation until an authenticated, bounded native transport is implemented and validated.
+- Real keyboard, mouse, browser, OCR, and UIA operations belong to the Windows native-helper boundary.
+- Generated candidates are evidence for review, not approval to publish or deploy.
+- Do not put credentials, tokens, private topology, or sensitive UI data in issues or logs.
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting and the current support boundary.
+
+## Repository layout
+
+```text
+packages/mcp-server-smart-typer/  TypeScript MCP development server
+packages/native-helpers/          Experimental Windows automation helpers
+scripts/                           Release and repository-boundary validators
+.github/workflows/                 Read-only CI and candidate-build workflows
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
