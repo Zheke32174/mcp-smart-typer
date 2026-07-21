@@ -42,9 +42,15 @@ for (const value of [
   serverPackage.bugs?.url,
   serverPackage.homepage,
 ]) {
-  assert(String(value || '').toLowerCase().includes(expectedRepository), 'npm metadata is not bound to the owned repository');
+  assert(
+    String(value || '').toLowerCase().includes(expectedRepository),
+    'npm metadata is not bound to the owned repository',
+  );
 }
-assert(pyproject.toLowerCase().includes(expectedRepository), 'Python metadata is not bound to the owned repository');
+assert(
+  pyproject.toLowerCase().includes(expectedRepository),
+  'Python metadata is not bound to the owned repository',
+);
 for (const forbidden of [
   '@modelcontextprotocol/server-smart-typer',
   'github.com/modelcontextprotocol/server-smart-typer',
@@ -56,34 +62,74 @@ for (const forbidden of [
 
 const pythonVersion = pyproject.match(/^version = "([^"]+)"$/m)?.[1];
 const versions = [rootPackage.version, serverPackage.version, pythonVersion];
-assert(versions.every((value) => value && value === versions[0]), `package versions differ: ${versions.join(', ')}`);
-assert(rootPackage.packageManager === 'npm@10.8.2', 'packageManager must identify exact npm 10.8.2');
-assert(rootPackage.engines?.npm === '>=10.0.0', 'npm engine floor is missing');
+assert(
+  versions.every((value) => value && value === versions[0]),
+  `package versions differ: ${versions.join(', ')}`,
+);
+assert(
+  rootPackage.packageManager === 'npm@10.9.3',
+  'packageManager must identify exact npm 10.9.3',
+);
+assert(rootPackage.engines?.node === '>=22.0.0', 'Node engine floor must be 22 or newer');
+assert(rootPackage.engines?.npm === '>=10.9.3', 'npm engine floor must be 10.9.3 or newer');
 assert(packageLock.lockfileVersion === 3, 'package-lock.json must be lockfile version 3');
-assert(!Object.hasOwn(rootPackage.scripts || {}, 'version'), 'implicit npm version lifecycle mutation is enabled');
-assert(rootPackage.scripts?.['prepare-release'] === 'node scripts/prepare-release.js', 'release preparation is not explicit');
-assert(rootPackage.scripts?.['validate-cicd'] === 'node scripts/validate-release-boundary.js', 'package validation does not use the canonical policy script');
+assert(
+  !Object.hasOwn(rootPackage.scripts || {}, 'version'),
+  'implicit npm version lifecycle mutation is enabled',
+);
+assert(
+  rootPackage.scripts?.['prepare-release'] === 'node scripts/prepare-release.js',
+  'release preparation is not explicit',
+);
+assert(
+  rootPackage.scripts?.['validate-cicd'] === 'node scripts/validate-release-boundary.js',
+  'package validation does not use the canonical policy script',
+);
 for (const [name, command] of Object.entries(rootPackage.scripts || {})) {
   assert(!String(command).includes('pnpm'), `root script ${name} still invokes pnpm`);
 }
 
 assert(ci.includes('permissions:\n  contents: read'), 'ordinary CI is not read-only');
-for (const forbidden of ['publish-npm', 'npm publish', 'NODE_AUTH_TOKEN', 'secrets.NPM_TOKEN', 'action-gh-release', '|| echo', 'pnpm']) {
+for (const forbidden of [
+  'publish-npm',
+  'npm publish',
+  'NODE_AUTH_TOKEN',
+  'secrets.NPM_TOKEN',
+  'action-gh-release',
+  '|| echo',
+  'pnpm',
+]) {
   assert(!ci.includes(forbidden), `ordinary CI contains forbidden behavior: ${forbidden}`);
 }
 assert(!ci.includes("tags:\n      - 'v*'"), 'ordinary CI is also acting as the tag workflow');
 assert(ci.includes('npm ci'), 'ordinary CI does not install from package-lock.json');
 assert(ci.includes('python -m pytest -xvs .'), 'Python tests are not fail-closed');
 assert(ci.includes('if-no-files-found: error'), 'missing candidate outputs do not fail CI');
-assert(ci.includes('node scripts/validate-release-boundary.js'), 'ordinary CI does not run the canonical policy validator');
+assert(
+  ci.includes('node scripts/validate-release-boundary.js'),
+  'ordinary CI does not run the canonical policy validator',
+);
+assert(ci.includes('node-version: [22.x, 24.x]'), 'ordinary CI must test maintained Node LTS lines');
 
 assert(candidate.includes("tags:\n      - 'v*'"), 'candidate workflow is not tag-only');
-assert(candidate.includes("os.environ['GITHUB_REF_NAME'] != f'v{version}'"), 'candidate tag is not bound to package version');
-assert(candidate.includes("'source_commit': os.environ['GITHUB_SHA']"), 'candidate receipt is not bound to source commit');
-assert(candidate.includes("'publication_authority': 'none'"), 'candidate receipt claims publication authority');
+assert(
+  candidate.includes("os.environ['GITHUB_REF_NAME'] != f'v{version}'"),
+  'candidate tag is not bound to package version',
+);
+assert(
+  candidate.includes("'source_commit': os.environ['GITHUB_SHA']"),
+  'candidate receipt is not bound to source commit',
+);
+assert(
+  candidate.includes("'publication_authority': 'none'"),
+  'candidate receipt claims publication authority',
+);
 assert(candidate.includes("'package_lock_sha256'"), 'candidate receipt is not bound to package-lock.json');
 assert(candidate.includes('npm ci'), 'candidate workflow does not install from package-lock.json');
-assert(candidate.includes('node scripts/validate-release-boundary.js'), 'candidate workflow does not run the canonical policy validator');
+assert(
+  candidate.includes('node scripts/validate-release-boundary.js'),
+  'candidate workflow does not run the canonical policy validator',
+);
 for (const forbidden of ['npm publish', 'action-gh-release', 'secrets.NPM_TOKEN', 'pnpm']) {
   assert(!candidate.includes(forbidden), `candidate workflow contains forbidden behavior: ${forbidden}`);
 }
@@ -114,7 +160,10 @@ for (const action of expectedActions) {
   assert(ci.includes(action) || candidate.includes(action), `pinned action missing: ${action}`);
 }
 for (const workflow of [ci, candidate]) {
-  assert(!/uses:\s+actions\/[A-Za-z0-9_.-]+@v\d+/m.test(workflow), 'moving actions/* version tag remains');
+  assert(
+    !/uses:\s+actions\/[A-Za-z0-9_.-]+@v\d+/m.test(workflow),
+    'moving actions/* version tag remains',
+  );
   for (const match of workflow.matchAll(/uses:\s+(actions\/[A-Za-z0-9_.-]+)@([^\s]+)/g)) {
     assert(/^[0-9a-f]{40}$/.test(match[2]), `${match[1]} is not pinned to one commit`);
   }
@@ -125,4 +174,6 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log('PASS: owned provenance, one npm lock, explicit preparation, fail-closed tests, read-only CI, pinned actions, and candidate-only tags');
+console.log(
+  'PASS: owned provenance, one npm lock, supported runtimes, explicit preparation, fail-closed tests, read-only CI, pinned actions, and candidate-only tags',
+);
