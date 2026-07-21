@@ -3,8 +3,8 @@ import * as protoLoader from '@grpc/proto-loader';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { 
-  GrpcConnectionError, 
+import {
+  GrpcConnectionError,
   UIAutomationError,
   TypeTextRequest,
   TypeTextResponse,
@@ -16,7 +16,7 @@ import {
   FindElementResponse,
   ClickElementRequest,
   ClickElementResponse,
-  ServerConfig
+  ServerConfig,
 } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -42,11 +42,11 @@ export class GrpcClient {
   async connect(): Promise<void> {
     try {
       logger.info('Connecting to native helper gRPC service...');
-      
+
       // Load the protobuf definition
       const protoPath = join(__dirname, '../../proto/ui_automation.proto');
       logger.debug('Loading proto file from:', protoPath);
-      
+
       const packageDefinition = protoLoader.loadSync(protoPath, {
         keepCase: true,
         longs: String,
@@ -56,7 +56,7 @@ export class GrpcClient {
       });
 
       const proto = grpc.loadPackageDefinition(packageDefinition) as any;
-      
+
       // Create the gRPC client
       this.client = new proto.ui_automation.UIAutomationService(
         `${this.config.grpcHost}:${this.config.grpcPort}`,
@@ -66,7 +66,7 @@ export class GrpcClient {
       // Test the connection
       await this.waitForConnection();
       this.isConnected = true;
-      
+
       logger.info(`Connected to gRPC service at ${this.config.grpcHost}:${this.config.grpcPort}`);
     } catch (error) {
       logger.error('Failed to connect to gRPC service:', error);
@@ -92,7 +92,7 @@ export class GrpcClient {
   private async waitForConnection(): Promise<void> {
     return new Promise((resolve, reject) => {
       const deadline = Date.now() + this.config.timeout;
-      
+
       this.client.waitForReady(deadline, (error: Error | null) => {
         if (error) {
           reject(error);
@@ -113,14 +113,16 @@ export class GrpcClient {
 
     return new Promise((resolve, reject) => {
       const deadline = Date.now() + this.config.timeout;
-      
+
       this.client[methodName](request, { deadline }, (error: Error | null, response: TResponse) => {
         if (error) {
           logger.error(`gRPC call ${methodName} failed:`, error);
-          reject(new UIAutomationError(
-            `UI automation call ${methodName} failed: ${error.message}`,
-            error
-          ));
+          reject(
+            new UIAutomationError(
+              `UI automation call ${methodName} failed: ${error.message}`,
+              error
+            )
+          );
         } else {
           logger.debug(`gRPC call ${methodName} succeeded:`, response);
           resolve(response);
@@ -141,7 +143,10 @@ export class GrpcClient {
 
   async getActiveWindow(request: GetActiveWindowRequest): Promise<GetActiveWindowResponse> {
     logger.debug('Calling getActiveWindow:', request);
-    return this.callRpc<GetActiveWindowRequest, GetActiveWindowResponse>('getActiveWindow', request);
+    return this.callRpc<GetActiveWindowRequest, GetActiveWindowResponse>(
+      'getActiveWindow',
+      request
+    );
   }
 
   async findElement(request: FindElementRequest): Promise<FindElementResponse> {

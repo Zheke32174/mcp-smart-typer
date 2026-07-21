@@ -20,18 +20,20 @@ class Logger {
 
   private formatMessage(level: LogLevel, message: string, ...args: any[]): string {
     const timestamp = new Date().toISOString();
-    
+
     let formattedArgs = '';
     if (args.length > 0) {
-      const processedArgs = this.enableSecureMasking 
+      const processedArgs = this.enableSecureMasking
         ? args.map(arg => this.maskSensitiveData(arg))
         : args;
-      
-      formattedArgs = ' ' + processedArgs.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ');
+
+      formattedArgs =
+        ' ' +
+        processedArgs
+          .map(arg => (typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)))
+          .join(' ');
     }
-    
+
     return `[${timestamp}] [${level.toUpperCase()}] ${message}${formattedArgs}`;
   }
 
@@ -46,10 +48,10 @@ class Logger {
 
     if (typeof data === 'object' && data !== null) {
       const masked = Array.isArray(data) ? [] : {};
-      
+
       for (const [key, value] of Object.entries(data)) {
         const isSensitiveKey = this.isSensitiveKey(key);
-        
+
         if (isSensitiveKey && typeof value === 'string') {
           (masked as any)[key] = this.maskString(value);
         } else if (typeof value === 'object') {
@@ -58,7 +60,7 @@ class Logger {
           (masked as any)[key] = value;
         }
       }
-      
+
       return masked;
     }
 
@@ -67,11 +69,30 @@ class Logger {
 
   private isSensitiveKey(key: string): boolean {
     const sensitiveKeywords = [
-      'password', 'passwd', 'pwd', 'pass', 'secret', 'key', 'token', 'auth',
-      'credential', 'pin', 'code', 'otp', '2fa', 'mfa', 'bearer', 'jwt',
-      'api_key', 'apikey', 'access_token', 'refresh_token', 'session_id', 'text'
+      'password',
+      'passwd',
+      'pwd',
+      'pass',
+      'secret',
+      'key',
+      'token',
+      'auth',
+      'credential',
+      'pin',
+      'code',
+      'otp',
+      '2fa',
+      'mfa',
+      'bearer',
+      'jwt',
+      'api_key',
+      'apikey',
+      'access_token',
+      'refresh_token',
+      'session_id',
+      'text',
     ];
-    
+
     const lowerKey = key.toLowerCase();
     return sensitiveKeywords.some(keyword => lowerKey.includes(keyword));
   }
@@ -85,7 +106,7 @@ class Logger {
 
     let maskedText = text;
     for (const pattern of sensitivePatterns) {
-      maskedText = maskedText.replace(pattern, (match) => this.maskString(match));
+      maskedText = maskedText.replace(pattern, match => this.maskString(match));
     }
 
     return maskedText;
@@ -134,7 +155,12 @@ class Logger {
   /**
    * Log with explicit security context
    */
-  secureLog(level: LogLevel, message: string, data?: any, options?: { fieldId?: string; hasSensitiveData?: boolean }): void {
+  secureLog(
+    level: LogLevel,
+    message: string,
+    data?: any,
+    options?: { fieldId?: string; hasSensitiveData?: boolean }
+  ): void {
     if (!this.shouldLog(level)) {
       return;
     }
@@ -160,7 +186,7 @@ class Logger {
   getConfig(): { level: LogLevel; secureMasking: boolean } {
     return {
       level: this.level,
-      secureMasking: this.enableSecureMasking
+      secureMasking: this.enableSecureMasking,
     };
   }
 }

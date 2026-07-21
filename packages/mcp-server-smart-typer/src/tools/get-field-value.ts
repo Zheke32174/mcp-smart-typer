@@ -5,11 +5,11 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { 
-  getFieldValueRequest, 
+import {
+  getFieldValueRequest,
   getFieldValueResponse,
   GetFieldValueRequest,
-  GetFieldValueResponse 
+  GetFieldValueResponse,
 } from '../schemas/index.js';
 import { logger } from '../utils/logger.js';
 import { generateAsyncJobId } from '../utils/job-manager.js';
@@ -27,7 +27,7 @@ export function registerGetFieldValueTool(server: McpServer, nativeClient: any) 
 
       // Generate async job ID for tracking
       const asyncJobId = generateAsyncJobId();
-      
+
       // Call native client to get field value
       const result = await nativeClient.getFieldValue({
         fieldId: params.fieldId,
@@ -35,33 +35,37 @@ export function registerGetFieldValueTool(server: McpServer, nativeClient: any) 
       });
 
       // Check if field contains sensitive data
-      const isSecure = result.fieldInfo?.inputType === 'password' || 
-                      result.fieldInfo?.name?.toLowerCase().includes('password') ||
-                      params.securityFlags?.includes('sensitive');
+      const isSecure =
+        result.fieldInfo?.inputType === 'password' ||
+        result.fieldInfo?.name?.toLowerCase().includes('password') ||
+        params.securityFlags?.includes('sensitive');
 
       // Build response
       const response: GetFieldValueResponse = {
-        value: isSecure ? '[REDACTED]' : (result.value || ''),
-        fieldInfo: result.fieldInfo ? {
-          id: result.fieldInfo.id,
-          name: result.fieldInfo.name,
-          type: result.fieldInfo.type,
-          metadata: result.fieldInfo.metadata,
-        } : undefined,
+        value: isSecure ? '[REDACTED]' : result.value || '',
+        fieldInfo: result.fieldInfo
+          ? {
+              id: result.fieldInfo.id,
+              name: result.fieldInfo.name,
+              type: result.fieldInfo.type,
+              metadata: result.fieldInfo.metadata,
+            }
+          : undefined,
         isSecure,
         asyncJobId,
-        errorCode: result.success === false ? (result.errorCode || 'RETRIEVAL_ERROR') : undefined,
-        errorMessage: result.success === false ? (result.errorMessage || 'Failed to get field value') : undefined,
+        errorCode: result.success === false ? result.errorCode || 'RETRIEVAL_ERROR' : undefined,
+        errorMessage:
+          result.success === false ? result.errorMessage || 'Failed to get field value' : undefined,
       };
 
       // Validate response with Zod
       const validatedResponse = getFieldValueResponse.parse(response);
-      
-      logger.info('Field value retrieved:', { 
+
+      logger.info('Field value retrieved:', {
         fieldId: params.fieldId,
         valueLength: result.value?.length || 0,
         isSecure,
-        asyncJobId 
+        asyncJobId,
       });
 
       return {
@@ -74,7 +78,7 @@ export function registerGetFieldValueTool(server: McpServer, nativeClient: any) 
       };
     } catch (error) {
       logger.error('Failed to get field value:', error);
-      
+
       // Return error response with proper schema
       const errorResponse: GetFieldValueResponse = {
         value: '',

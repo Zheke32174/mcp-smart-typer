@@ -10,7 +10,7 @@ import { logger } from '../utils/logger.js';
 beforeAll(() => {
   // Set test log level to reduce noise
   process.env.LOG_LEVEL = 'warn';
-  
+
   // Initialize test environment
   console.log('🧪 Starting MCP Smart Typer test suite...');
 });

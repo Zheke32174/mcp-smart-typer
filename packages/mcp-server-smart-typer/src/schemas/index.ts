@@ -13,22 +13,31 @@ const baseResponse = z.object({
 });
 
 // Security flags schema
-const securityFlags = z.array(z.string()).optional().describe('Security flags for operation validation');
+const securityFlags = z
+  .array(z.string())
+  .optional()
+  .describe('Security flags for operation validation');
 
 // Field metadata schema
 const fieldMetadata = z.object({
   description: z.string().optional().describe('Field description'),
   placeholder: z.string().optional().describe('Field placeholder text'),
   maxLength: z.number().optional().describe('Maximum input length'),
-  inputType: z.enum(['text', 'password', 'email', 'number', 'tel', 'url']).optional().describe('Input field type'),
+  inputType: z
+    .enum(['text', 'password', 'email', 'number', 'tel', 'url'])
+    .optional()
+    .describe('Input field type'),
   required: z.boolean().optional().describe('Whether field is required'),
   pattern: z.string().optional().describe('Validation pattern regex'),
-  bounds: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }).optional().describe('Field coordinates and dimensions'),
+  bounds: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional()
+    .describe('Field coordinates and dimensions'),
   confidence: z.number().min(0).max(1).optional().describe('Detection confidence score'),
 });
 
@@ -42,38 +51,58 @@ const fieldInfo = z.object({
 
 // 1. DETECT FIELDS TOOL
 export const detectFieldsRequest = z.object({
-  contextHint: z.string().describe('Context hint for field detection (e.g., "login-form", "search-box")'),
+  contextHint: z
+    .string()
+    .describe('Context hint for field detection (e.g., "login-form", "search-box")'),
   securityFlags: securityFlags,
   windowTitle: z.string().optional().describe('Specific window title to focus on'),
   includeHidden: z.boolean().default(false).describe('Whether to include hidden fields'),
-  confidence: z.number().min(0).max(1).default(0.8).describe('Minimum confidence threshold for detection'),
+  confidence: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(0.8)
+    .describe('Minimum confidence threshold for detection'),
 });
 
 export const detectFieldsResponse = baseResponse.extend({
   fields: z.array(fieldInfo).describe('List of detected fields with metadata'),
-  windowInfo: z.object({
-    title: z.string(),
-    className: z.string(),
-    handle: z.string(),
-    bounds: z.object({
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number(),
-    }),
-  }).optional().describe('Information about the active window'),
+  windowInfo: z
+    .object({
+      title: z.string(),
+      className: z.string(),
+      handle: z.string(),
+      bounds: z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      }),
+    })
+    .optional()
+    .describe('Information about the active window'),
 });
 
 // 2. TYPE TEXT TOOL
 export const typeTextRequest = z.object({
   fieldId: z.string().describe('Target field identifier'),
   text: z.string().describe('Text to type'),
-  options: z.object({
-    delay: z.number().min(0).max(5000).default(50).describe('Delay between keystrokes in milliseconds'),
-    clearFirst: z.boolean().default(false).describe('Clear field before typing'),
-    pressEnter: z.boolean().default(false).describe('Press Enter after typing'),
-    simulate: z.boolean().default(false).describe('Simulate typing without actual input (for testing)'),
-  }).optional(),
+  options: z
+    .object({
+      delay: z
+        .number()
+        .min(0)
+        .max(5000)
+        .default(50)
+        .describe('Delay between keystrokes in milliseconds'),
+      clearFirst: z.boolean().default(false).describe('Clear field before typing'),
+      pressEnter: z.boolean().default(false).describe('Press Enter after typing'),
+      simulate: z
+        .boolean()
+        .default(false)
+        .describe('Simulate typing without actual input (for testing)'),
+    })
+    .optional(),
   securityFlags: securityFlags,
 });
 
@@ -116,7 +145,10 @@ export const focusFieldResponse = baseResponse.extend({
 export const clearFieldRequest = z.object({
   fieldId: z.string().describe('Field identifier to clear'),
   securityFlags: securityFlags,
-  method: z.enum(['selectAll', 'backspace', 'delete']).default('selectAll').describe('Method to clear field'),
+  method: z
+    .enum(['selectAll', 'backspace', 'delete'])
+    .default('selectAll')
+    .describe('Method to clear field'),
 });
 
 export const clearFieldResponse = baseResponse.extend({
@@ -131,30 +163,37 @@ export const getWindowInfoRequest = z.object({
 });
 
 export const getWindowInfoResponse = baseResponse.extend({
-  windows: z.array(z.object({
-    title: z.string(),
-    className: z.string(),
-    handle: z.string(),
-    pid: z.number(),
-    isActive: z.boolean(),
-    bounds: z.object({
-      x: z.number(),
-      y: z.number(),
-      width: z.number(),
-      height: z.number(),
-    }),
-  })).describe('List of available windows'),
+  windows: z
+    .array(
+      z.object({
+        title: z.string(),
+        className: z.string(),
+        handle: z.string(),
+        pid: z.number(),
+        isActive: z.boolean(),
+        bounds: z.object({
+          x: z.number(),
+          y: z.number(),
+          width: z.number(),
+          height: z.number(),
+        }),
+      })
+    )
+    .describe('List of available windows'),
   activeWindow: z.string().optional().describe('Handle of currently active window'),
 });
 
 // Take screenshot tool for debugging
 export const takeScreenshotRequest = z.object({
-  region: z.object({
-    x: z.number(),
-    y: z.number(),
-    width: z.number(),
-    height: z.number(),
-  }).optional().describe('Specific region to capture'),
+  region: z
+    .object({
+      x: z.number(),
+      y: z.number(),
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional()
+    .describe('Specific region to capture'),
   securityFlags: securityFlags,
   format: z.enum(['png', 'jpeg']).default('png').describe('Image format'),
   quality: z.number().min(1).max(100).default(90).describe('Image quality for JPEG'),
@@ -163,10 +202,13 @@ export const takeScreenshotRequest = z.object({
 export const takeScreenshotResponse = baseResponse.extend({
   success: z.boolean().describe('Whether screenshot was taken'),
   imageData: z.string().optional().describe('Base64 encoded image data'),
-  imageSize: z.object({
-    width: z.number(),
-    height: z.number(),
-  }).optional().describe('Image dimensions'),
+  imageSize: z
+    .object({
+      width: z.number(),
+      height: z.number(),
+    })
+    .optional()
+    .describe('Image dimensions'),
   filePath: z.string().optional().describe('Path to saved screenshot file'),
 });
 
@@ -189,9 +231,9 @@ export type TakeScreenshotResponse = z.infer<typeof takeScreenshotResponse>;
 // Example data for documentation
 export const examples = {
   detectFieldsRequest: {
-    contextHint: "login-form",
-    securityFlags: ["authenticated"],
-    windowTitle: "Login - My App",
+    contextHint: 'login-form',
+    securityFlags: ['authenticated'],
+    windowTitle: 'Login - My App',
     includeHidden: false,
     confidence: 0.8,
   } as DetectFieldsRequest,
@@ -199,24 +241,24 @@ export const examples = {
   detectFieldsResponse: {
     fields: [
       {
-        id: "field_username_001",
-        name: "username",
-        type: "input",
+        id: 'field_username_001',
+        name: 'username',
+        type: 'input',
         metadata: {
-          description: "Username input field",
-          inputType: "text",
+          description: 'Username input field',
+          inputType: 'text',
           required: true,
           bounds: { x: 100, y: 200, width: 200, height: 30 },
           confidence: 0.95,
         },
       },
       {
-        id: "field_password_002", 
-        name: "password",
-        type: "input",
+        id: 'field_password_002',
+        name: 'password',
+        type: 'input',
         metadata: {
-          description: "Password input field",
-          inputType: "password",
+          description: 'Password input field',
+          inputType: 'password',
           required: true,
           bounds: { x: 100, y: 250, width: 200, height: 30 },
           confidence: 0.92,
@@ -224,29 +266,29 @@ export const examples = {
       },
     ],
     windowInfo: {
-      title: "Login - My App",
-      className: "Chrome_WidgetWin_1",
-      handle: "0x001234AB",
+      title: 'Login - My App',
+      className: 'Chrome_WidgetWin_1',
+      handle: '0x001234AB',
       bounds: { x: 0, y: 0, width: 1920, height: 1080 },
     },
   } as DetectFieldsResponse,
 
   typeTextRequest: {
-    fieldId: "field_username_001",
-    text: "john.doe@example.com",
+    fieldId: 'field_username_001',
+    text: 'john.doe@example.com',
     options: {
       delay: 50,
       clearFirst: true,
       pressEnter: false,
       simulate: false,
     },
-    securityFlags: ["encrypted"],
+    securityFlags: ['encrypted'],
   } as TypeTextRequest,
 
   typeTextResponse: {
     success: true,
     charactersTyped: 19,
     timeTaken: 950,
-    asyncJobId: "job_12345",
+    asyncJobId: 'job_12345',
   } as TypeTextResponse,
 };

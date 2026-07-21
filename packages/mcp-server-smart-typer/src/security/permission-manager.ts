@@ -20,11 +20,11 @@ export class PermissionManager {
   constructor() {
     this.allowTyping = process.env.ALLOW_TYPING === 'true';
     this.mcpRootPermissions = new Set();
-    
+
     // Log initial permission state
     logger.info('Permission Manager initialized', {
       allowTyping: this.allowTyping,
-      hasAllowTypingEnv: process.env.ALLOW_TYPING !== undefined
+      hasAllowTypingEnv: process.env.ALLOW_TYPING !== undefined,
     });
   }
 
@@ -52,7 +52,7 @@ export class PermissionManager {
     if (this.allowTyping) {
       logger.debug('Typing allowed via ALLOW_TYPING environment variable', {
         sessionId: context.sessionId,
-        toolName: context.toolName
+        toolName: context.toolName,
       });
       return true;
     }
@@ -61,7 +61,7 @@ export class PermissionManager {
     if (this.mcpRootPermissions.has(context.sessionId)) {
       logger.debug('Typing allowed via MCP root permission', {
         sessionId: context.sessionId,
-        toolName: context.toolName
+        toolName: context.toolName,
       });
       return true;
     }
@@ -70,7 +70,7 @@ export class PermissionManager {
     if (context.mcpRootPermission === true) {
       logger.debug('Typing allowed via explicit permission in context', {
         sessionId: context.sessionId,
-        toolName: context.toolName
+        toolName: context.toolName,
       });
       return true;
     }
@@ -80,7 +80,7 @@ export class PermissionManager {
       toolName: context.toolName,
       fieldId: context.fieldId,
       allowTypingEnv: this.allowTyping,
-      hasMcpRootPermission: this.mcpRootPermissions.has(context.sessionId)
+      hasMcpRootPermission: this.mcpRootPermissions.has(context.sessionId),
     });
 
     return false;
@@ -93,7 +93,7 @@ export class PermissionManager {
     if (!this.isTypingAllowed(context)) {
       throw new Error(
         `Typing not allowed. Set ALLOW_TYPING=true environment variable or grant explicit MCP root permission. ` +
-        `Session: ${context.sessionId}, Tool: ${context.toolName}`
+          `Session: ${context.sessionId}, Tool: ${context.toolName}`
       );
     }
   }
@@ -107,7 +107,7 @@ export class PermissionManager {
   } {
     return {
       allowTypingEnv: this.allowTyping,
-      activeMcpRootSessions: this.mcpRootPermissions.size
+      activeMcpRootSessions: this.mcpRootPermissions.size,
     };
   }
 }

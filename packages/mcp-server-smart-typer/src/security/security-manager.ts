@@ -7,7 +7,15 @@ import { logger } from '../utils/logger.js';
 
 export interface SensitiveField {
   fieldId: string;
-  fieldType: 'password' | 'email' | 'phone' | 'ssn' | 'credit_card' | 'api_key' | 'token' | 'generic';
+  fieldType:
+    | 'password'
+    | 'email'
+    | 'phone'
+    | 'ssn'
+    | 'credit_card'
+    | 'api_key'
+    | 'token'
+    | 'generic';
   confidence: number;
 }
 
@@ -30,7 +38,7 @@ export class SecurityManager {
       ['ssn', /\b\d{3}[-.]?\d{2}[-.]?\d{4}\b/g],
       ['credit_card', /\b(?:\d{4}[-.\s]?){3}\d{4}\b/g],
       ['api_key', /(?:api[_-]?key|apikey|access[_-]?token|bearer[_-]?token)/i],
-      ['token', /(?:jwt|bearer|token)[_-]?[a-zA-Z0-9+/=]{20,}/i]
+      ['token', /(?:jwt|bearer|token)[_-]?[a-zA-Z0-9+/=]{20,}/i],
     ]);
 
     // Patterns for detecting password fields by name/id/class
@@ -48,38 +56,64 @@ export class SecurityManager {
       /code/i,
       /otp/i,
       /2fa/i,
-      /mfa/i
+      /mfa/i,
     ];
 
     // Keywords that indicate sensitive content
     this.sensitiveKeywords = [
-      'password', 'passwd', 'pwd', 'pass', 'secret', 'key', 'token', 'auth',
-      'credential', 'pin', 'code', 'otp', '2fa', 'mfa', 'bearer', 'jwt',
-      'api_key', 'apikey', 'access_token', 'refresh_token', 'session_id'
+      'password',
+      'passwd',
+      'pwd',
+      'pass',
+      'secret',
+      'key',
+      'token',
+      'auth',
+      'credential',
+      'pin',
+      'code',
+      'otp',
+      '2fa',
+      'mfa',
+      'bearer',
+      'jwt',
+      'api_key',
+      'apikey',
+      'access_token',
+      'refresh_token',
+      'session_id',
     ];
   }
 
   /**
    * Detect if a field is likely to contain sensitive information
    */
-  detectSensitiveField(fieldId: string, fieldName?: string, fieldType?: string, fieldClass?: string): SensitiveField | null {
-    const identifiers = [fieldId, fieldName, fieldType, fieldClass].filter(Boolean).join(' ').toLowerCase();
-    
+  detectSensitiveField(
+    fieldId: string,
+    fieldName?: string,
+    fieldType?: string,
+    fieldClass?: string
+  ): SensitiveField | null {
+    const identifiers = [fieldId, fieldName, fieldType, fieldClass]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
     for (const [type, pattern] of this.sensitivePatterns) {
       if (pattern.test(identifiers)) {
         const confidence = this.calculateConfidence(identifiers, type);
-        
+
         logger.debug('Sensitive field detected', {
           fieldId,
           detectedType: type,
           confidence,
-          identifiers: identifiers.substring(0, 100) // Limit log output
+          identifiers: identifiers.substring(0, 100), // Limit log output
         });
 
         return {
           fieldId,
           fieldType: type as any,
-          confidence
+          confidence,
         };
       }
     }
@@ -90,9 +124,17 @@ export class SecurityManager {
   /**
    * Check if a field is a password field
    */
-  isPasswordField(fieldId: string, fieldName?: string, fieldType?: string, fieldClass?: string): boolean {
-    const identifiers = [fieldId, fieldName, fieldType, fieldClass].filter(Boolean).join(' ').toLowerCase();
-    
+  isPasswordField(
+    fieldId: string,
+    fieldName?: string,
+    fieldType?: string,
+    fieldClass?: string
+  ): boolean {
+    const identifiers = [fieldId, fieldName, fieldType, fieldClass]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
     // Check for explicit password type
     if (fieldType?.toLowerCase() === 'password') {
       return true;
@@ -112,10 +154,10 @@ export class SecurityManager {
 
     if (typeof data === 'object' && data !== null) {
       const masked = Array.isArray(data) ? [] : {};
-      
+
       for (const [key, value] of Object.entries(data)) {
         const isSensitiveKey = this.isSensitiveKey(key);
-        
+
         if (isSensitiveKey && typeof value === 'string') {
           (masked as any)[key] = this.maskString(value);
         } else if (typeof value === 'object') {
@@ -124,7 +166,7 @@ export class SecurityManager {
           (masked as any)[key] = value;
         }
       }
-      
+
       return masked;
     }
 
@@ -134,19 +176,25 @@ export class SecurityManager {
   /**
    * Mask sensitive strings based on patterns
    */
-  private maskSensitiveString(text: string, fieldContext?: { fieldId?: string; fieldType?: string }): string {
+  private maskSensitiveString(
+    text: string,
+    fieldContext?: { fieldId?: string; fieldType?: string }
+  ): string {
     let maskedText = text;
 
     // If we know the field context and it's sensitive, mask the entire value
-    if (fieldContext?.fieldId && this.isPasswordField(fieldContext.fieldId, '', fieldContext.fieldType)) {
+    if (
+      fieldContext?.fieldId &&
+      this.isPasswordField(fieldContext.fieldId, '', fieldContext.fieldType)
+    ) {
       return this.maskString(text);
     }
 
     // Apply pattern-based masking
     for (const [type, pattern] of this.sensitivePatterns) {
       if (type === 'password') continue; // Skip password pattern for string content
-      
-      maskedText = maskedText.replace(pattern, (match) => this.maskString(match));
+
+      maskedText = maskedText.replace(pattern, match => this.maskString(match));
     }
 
     return maskedText;
@@ -165,15 +213,15 @@ export class SecurityManager {
    */
   private calculateConfidence(identifiers: string, type: string): number {
     const exactMatches = {
-      'password': ['password', 'passwd', 'pwd'],
-      'email': ['email', 'mail'],
-      'phone': ['phone', 'tel', 'mobile'],
-      'api_key': ['apikey', 'api_key', 'key'],
-      'token': ['token', 'bearer', 'jwt']
+      password: ['password', 'passwd', 'pwd'],
+      email: ['email', 'mail'],
+      phone: ['phone', 'tel', 'mobile'],
+      api_key: ['apikey', 'api_key', 'key'],
+      token: ['token', 'bearer', 'jwt'],
     };
 
     const exact = exactMatches[type as keyof typeof exactMatches] || [];
-    
+
     // High confidence for exact matches
     if (exact.some(match => identifiers.includes(match))) {
       return 0.95;
@@ -206,7 +254,11 @@ export class SecurityManager {
   /**
    * Create a secure log entry with masked sensitive data
    */
-  createSecureLogEntry(level: 'debug' | 'info' | 'warn' | 'error', message: string, data?: any): {
+  createSecureLogEntry(
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+    data?: any
+  ): {
     message: string;
     data: any;
     hasSensitiveData: boolean;
@@ -218,14 +270,14 @@ export class SecurityManager {
       const originalData = JSON.stringify(data);
       maskedData = this.maskSensitiveData(data);
       const maskedDataString = JSON.stringify(maskedData);
-      
+
       hasSensitiveData = originalData !== maskedDataString;
     }
 
     return {
       message,
       data: maskedData,
-      hasSensitiveData
+      hasSensitiveData,
     };
   }
 
@@ -237,7 +289,7 @@ export class SecurityManager {
     warnings: string[];
   } {
     const warnings: string[] = [];
-    
+
     if (!securityFlags || securityFlags.length === 0) {
       warnings.push('No security flags provided');
       return { isValid: true, warnings };
@@ -245,7 +297,7 @@ export class SecurityManager {
 
     const validFlags = ['encrypted', 'sensitive', 'audit', 'restricted', 'public'];
     const invalidFlags = securityFlags.filter(flag => !validFlags.includes(flag));
-    
+
     if (invalidFlags.length > 0) {
       warnings.push(`Invalid security flags: ${invalidFlags.join(', ')}`);
     }
@@ -257,7 +309,7 @@ export class SecurityManager {
 
     return {
       isValid: invalidFlags.length === 0,
-      warnings
+      warnings,
     };
   }
 }

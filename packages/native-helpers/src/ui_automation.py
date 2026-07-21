@@ -3,15 +3,17 @@ UI Automation Handler: Contains implementations of various UI operations.
 """
 
 import asyncio
-import time
-from typing import List, Dict, Any, Optional
-import tempfile
 import os
+import tempfile
+import time
+from typing import Any, Dict, List, Optional
 
 import pyautogui
 import pygetwindow as gw
-from pynput.keyboard import Controller as KeyboardController, Key
-from pynput.mouse import Controller as MouseController, Button
+from pynput.keyboard import Controller as KeyboardController
+from pynput.keyboard import Key
+from pynput.mouse import Button
+from pynput.mouse import Controller as MouseController
 
 from .ocr_handler import get_ocr_handler
 from .vision_classifier import get_vision_classifier

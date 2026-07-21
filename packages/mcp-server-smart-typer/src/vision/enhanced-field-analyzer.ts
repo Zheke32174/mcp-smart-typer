@@ -20,18 +20,18 @@ export interface EnhancedFieldInfo {
   ariaLabel?: string;
   title?: string;
   autocomplete?: string;
-  
+
   // Visual attributes
   x: number;
   y: number;
   width: number;
   height: number;
-  
+
   // Text context
   labelText?: string;
   neighboringText?: string;
   parentText?: string;
-  
+
   // Model predictions
   visionPrediction?: {
     predictedType: string;
@@ -57,7 +57,15 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
 
   constructor(modelCacheDir?: string, enableEnhancedMode: boolean = true) {
     super(modelCacheDir);
-    this.pythonScriptPath = path.join(__dirname, '..', '..', '..', 'native-helpers', 'src', 'field_purpose_classifier.py');
+    this.pythonScriptPath = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'native-helpers',
+      'src',
+      'field_purpose_classifier.py'
+    );
     this.isEnhancedMode = enableEnhancedMode;
   }
 
@@ -69,19 +77,19 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
   ): Promise<EnhancedAnalysisResult[]> {
     // First run the original analysis
     const originalResults = await this.analyzeFields(screenshotPath, fieldBounds, semanticData);
-    
+
     if (!this.isEnhancedMode) {
       return originalResults;
     }
 
     // Enhance with Python classifier if available
     const enhancedResults: EnhancedAnalysisResult[] = [];
-    
+
     for (let i = 0; i < originalResults.length; i++) {
       const originalResult = originalResults[i];
       const fieldInfo = fieldsInfo?.[i];
       const bounds = fieldBounds[i];
-      
+
       try {
         // Prepare field info for Python classifier
         const enhancedFieldInfo: EnhancedFieldInfo = {
@@ -90,22 +98,23 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
           y: bounds.y,
           width: bounds.width,
           height: bounds.height,
-          visionPrediction: originalResult.visionClassification ? {
-            predictedType: originalResult.visionClassification.predictedType,
-            confidence: originalResult.visionClassification.confidence,
-            classProbabilities: originalResult.visionClassification.classProbabilities,
-          } : undefined,
+          visionPrediction: originalResult.visionClassification
+            ? {
+                predictedType: originalResult.visionClassification.predictedType,
+                confidence: originalResult.visionClassification.confidence,
+                classProbabilities: originalResult.visionClassification.classProbabilities,
+              }
+            : undefined,
           ocrConfidence: originalResult.ocrContext?.confidence || 0,
         };
 
         // Get enhanced classification
         const enhancedClassification = await this.getEnhancedClassification(enhancedFieldInfo);
-        
+
         enhancedResults.push({
           ...originalResult,
           enhancedClassification,
         });
-        
       } catch (error) {
         logger.warn(`Enhanced classification failed for field ${i}:`, error);
         enhancedResults.push(originalResult);
@@ -124,10 +133,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
   }> {
     return new Promise((resolve, reject) => {
       // Prepare Python script arguments
-      const scriptArgs = [
-        'classify_single_field',
-        JSON.stringify(fieldInfo)
-      ];
+      const scriptArgs = ['classify_single_field', JSON.stringify(fieldInfo)];
 
       // Spawn Python process
       const pythonProcess = spawn('python', [this.pythonScriptPath, ...scriptArgs], {
@@ -137,15 +143,15 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
       let stdout = '';
       let stderr = '';
 
-      pythonProcess.stdout.on('data', (data) => {
+      pythonProcess.stdout.on('data', data => {
         stdout += data.toString();
       });
 
-      pythonProcess.stderr.on('data', (data) => {
+      pythonProcess.stderr.on('data', data => {
         stderr += data.toString();
       });
 
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', code => {
         if (code !== 0) {
           reject(new Error(`Python script failed with code ${code}: ${stderr}`));
           return;
@@ -165,7 +171,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
         }
       });
 
-      pythonProcess.on('error', (error) => {
+      pythonProcess.on('error', error => {
         reject(new Error(`Failed to spawn Python process: ${error}`));
       });
     });
@@ -187,7 +193,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
       semanticData ? [semanticData] : undefined,
       fieldInfo ? [fieldInfo] : undefined
     );
-    
+
     return results[0];
   }
 
@@ -213,7 +219,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
    */
   static extractTextContext(element: any): Partial<EnhancedFieldInfo> {
     const context: Partial<EnhancedFieldInfo> = {};
-    
+
     // Try to find associated label
     if (element.id) {
       const label = document.querySelector(`label[for="${element.id}"]`);
@@ -230,17 +236,17 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
 
     // Get neighboring text (previous and next siblings)
     const neighbors: string[] = [];
-    
+
     if (element.previousElementSibling) {
       const prevText = element.previousElementSibling.textContent?.trim();
       if (prevText) neighbors.push(prevText);
     }
-    
+
     if (element.nextElementSibling) {
       const nextText = element.nextElementSibling.textContent?.trim();
       if (nextText) neighbors.push(nextText);
     }
-    
+
     if (neighbors.length > 0) {
       context.neighboringText = neighbors.join(' ');
     }
@@ -254,7 +260,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
   static createFieldInfo(element: any, bounds: FieldBounds): EnhancedFieldInfo {
     const domInfo = this.extractDOMInfo(element);
     const textContext = this.extractTextContext(element);
-    
+
     return {
       ...domInfo,
       ...textContext,
@@ -280,7 +286,7 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
     const bounds = fieldsData.map(f => f.bounds);
     const semanticData = fieldsData.map(f => f.semanticData);
     const fieldsInfo = fieldsData.map(f => f.fieldInfo);
-    
+
     return this.analyzeFieldsEnhanced(
       screenshotPath,
       bounds,
@@ -294,31 +300,35 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
    */
   getConfidenceThresholds(): Record<string, number> {
     return {
-      'email': 0.7,
-      'password': 0.8,
-      'search': 0.6,
-      'username': 0.7,
-      'name': 0.6,
-      'phone': 0.7,
-      'address': 0.6,
-      'comment': 0.5,
-      'text': 0.3,
-      'button': 0.8,
-      'submit': 0.8,
+      email: 0.7,
+      password: 0.8,
+      search: 0.6,
+      username: 0.7,
+      name: 0.6,
+      phone: 0.7,
+      address: 0.6,
+      comment: 0.5,
+      text: 0.3,
+      button: 0.8,
+      submit: 0.8,
     };
   }
 
   /**
    * Filter results by confidence threshold
    */
-  filterByConfidence(results: EnhancedAnalysisResult[], useEnhanced: boolean = true): EnhancedAnalysisResult[] {
+  filterByConfidence(
+    results: EnhancedAnalysisResult[],
+    useEnhanced: boolean = true
+  ): EnhancedAnalysisResult[] {
     const thresholds = this.getConfidenceThresholds();
-    
+
     return results.filter(result => {
-      const classification = useEnhanced && result.enhancedClassification 
-        ? result.enhancedClassification 
-        : { predictedType: result.combinedType, confidence: result.combinedConfidence };
-      
+      const classification =
+        useEnhanced && result.enhancedClassification
+          ? result.enhancedClassification
+          : { predictedType: result.combinedType, confidence: result.combinedConfidence };
+
       const threshold = thresholds[classification.predictedType] || 0.5;
       return classification.confidence >= threshold;
     });
@@ -341,15 +351,15 @@ export class EnhancedFieldAnalyzer extends FieldAnalyzer {
       let stdout = '';
       let stderr = '';
 
-      pythonProcess.stdout.on('data', (data) => {
+      pythonProcess.stdout.on('data', data => {
         stdout += data.toString();
       });
 
-      pythonProcess.stderr.on('data', (data) => {
+      pythonProcess.stderr.on('data', data => {
         stderr += data.toString();
       });
 
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', code => {
         if (code !== 0) {
           reject(new Error(`Python script failed: ${stderr}`));
           return;

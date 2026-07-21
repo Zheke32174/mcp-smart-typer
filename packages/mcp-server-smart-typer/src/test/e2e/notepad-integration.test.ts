@@ -24,12 +24,12 @@ describe('Notepad Integration E2E Tests', () => {
     try {
       notepadProcess = spawn('notepad.exe', [], {
         detached: false,
-        stdio: 'ignore'
+        stdio: 'ignore',
       });
-      
+
       // Give Notepad time to start
       await sleep(2000);
-      
+
       console.log('✅ Notepad started for testing');
     } catch (error) {
       console.warn('⚠️  Could not start Notepad, using mock implementation');
@@ -44,7 +44,7 @@ describe('Notepad Integration E2E Tests', () => {
         // Try to close Notepad gracefully
         notepadProcess.kill('SIGTERM');
         await sleep(1000);
-        
+
         // Force kill if still running
         if (!notepadProcess.killed) {
           notepadProcess.kill('SIGKILL');
@@ -77,11 +77,11 @@ describe('Notepad Integration E2E Tests', () => {
                 x: 10,
                 y: 50,
                 width: 780,
-                height: 500
+                height: 500,
               },
               confidence: 0.98,
-              analysis_method: 'windows_ui_automation'
-            }
+              analysis_method: 'windows_ui_automation',
+            },
           ],
           windowInfo: {
             title: 'Untitled - Notepad',
@@ -89,8 +89,8 @@ describe('Notepad Integration E2E Tests', () => {
             handle: notepadProcess?.pid?.toString() || 'mock_handle',
             bounds: { x: 100, y: 100, width: 800, height: 600 },
             processName: 'notepad.exe',
-            isActive: true
-          }
+            isActive: true,
+          },
         };
       };
 
@@ -115,15 +115,15 @@ describe('Notepad Integration E2E Tests', () => {
               name: 'notepad_edit',
               type: 'text',
               semantic_type: 'textarea',
-              confidence: 0.95
-            }
+              confidence: 0.95,
+            },
           ],
           windowInfo: {
             title: `${fileName} - Notepad`,
             className: 'Notepad',
             handle: 'mock_handle',
-            bounds: { x: 100, y: 100, width: 800, height: 600 }
-          }
+            bounds: { x: 100, y: 100, width: 800, height: 600 },
+          },
         };
       };
 
@@ -141,7 +141,7 @@ describe('Notepad Integration E2E Tests', () => {
     test('should detect modified document state', async () => {
       const mockModifiedDetection = async (hasUnsavedChanges: boolean) => {
         const titlePrefix = hasUnsavedChanges ? '*' : '';
-        
+
         return {
           fields: [
             {
@@ -149,14 +149,14 @@ describe('Notepad Integration E2E Tests', () => {
               name: 'notepad_edit',
               type: 'text',
               hasUnsavedChanges,
-              confidence: 0.96
-            }
+              confidence: 0.96,
+            },
           ],
           windowInfo: {
             title: `${titlePrefix}Untitled - Notepad`,
             className: 'Notepad',
-            hasUnsavedChanges
-          }
+            hasUnsavedChanges,
+          },
         };
       };
 
@@ -189,7 +189,7 @@ describe('Notepad Integration E2E Tests', () => {
           charactersTyped: text.length,
           timeTaken: simulatedTime,
           finalText: text,
-          windowTitle: 'Untitled - Notepad'
+          windowTitle: 'Untitled - Notepad',
         };
       };
 
@@ -213,7 +213,7 @@ Final line with special chars: @#$%^&*()`;
 
       const mockMultiLineTyping = async (text: string) => {
         const lines = text.split('\n');
-        
+
         return {
           success: true,
           fieldId: 'notepad_text_area_001',
@@ -221,7 +221,7 @@ Final line with special chars: @#$%^&*()`;
           linesTyped: lines.length,
           timeTaken: text.length * 40, // 40ms per character for longer text
           content: text,
-          lineBreaks: (text.match(/\n/g) || []).length
+          lineBreaks: (text.match(/\n/g) || []).length,
         };
       };
 
@@ -239,12 +239,12 @@ Final line with special chars: @#$%^&*()`;
     test('should handle special key combinations in Notepad', async () => {
       const mockSpecialKeys = async (operation: string) => {
         const operations = {
-          'select_all': { key: 'Ctrl+A', description: 'Select all text' },
-          'copy': { key: 'Ctrl+C', description: 'Copy selected text' },
-          'paste': { key: 'Ctrl+V', description: 'Paste from clipboard' },
-          'undo': { key: 'Ctrl+Z', description: 'Undo last operation' },
-          'save': { key: 'Ctrl+S', description: 'Save document' },
-          'new': { key: 'Ctrl+N', description: 'New document' }
+          select_all: { key: 'Ctrl+A', description: 'Select all text' },
+          copy: { key: 'Ctrl+C', description: 'Copy selected text' },
+          paste: { key: 'Ctrl+V', description: 'Paste from clipboard' },
+          undo: { key: 'Ctrl+Z', description: 'Undo last operation' },
+          save: { key: 'Ctrl+S', description: 'Save document' },
+          new: { key: 'Ctrl+N', description: 'New document' },
         };
 
         const op = operations[operation as keyof typeof operations];
@@ -257,7 +257,7 @@ Final line with special chars: @#$%^&*()`;
           operation,
           keyPressed: op.key,
           description: op.description,
-          timeTaken: 100 // Quick key press
+          timeTaken: 100, // Quick key press
         };
       };
 
@@ -287,7 +287,7 @@ Final line with special chars: @#$%^&*()`;
           originalLength: original.length,
           newLength: replacement.length,
           timeTaken: replacement.length * 45 + 200, // Typing time + selection time
-          charactersChanged: Math.abs(replacement.length - original.length)
+          charactersChanged: Math.abs(replacement.length - original.length),
         };
       };
 
@@ -299,24 +299,28 @@ Final line with special chars: @#$%^&*()`;
       expect(result.newLength).toBe(replacementText.length);
       expect(result.charactersChanged).toBeGreaterThan(0);
 
-      console.log(`✅ Text replacement verified: ${result.originalLength} → ${result.newLength} chars`);
+      console.log(
+        `✅ Text replacement verified: ${result.originalLength} → ${result.newLength} chars`
+      );
     });
   });
 
   describe('Advanced Notepad Scenarios', () => {
     test('should handle large text documents', async () => {
       // Generate large text content
-      const paragraphs = Array.from({ length: 50 }, (_, i) => 
-        `Paragraph ${i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit. ` +
-        `Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad ` +
-        `minim veniam, quis nostrud exercitation ullamco laboris.`
+      const paragraphs = Array.from(
+        { length: 50 },
+        (_, i) =>
+          `Paragraph ${i + 1}: Lorem ipsum dolor sit amet, consectetur adipiscing elit. ` +
+          `Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad ` +
+          `minim veniam, quis nostrud exercitation ullamco laboris.`
       );
       const largeText = paragraphs.join('\n\n');
 
       const mockLargeTextTyping = async (text: string) => {
         const chunkSize = 1000; // Type in chunks
         const chunks = Math.ceil(text.length / chunkSize);
-        
+
         return {
           success: true,
           fieldId: 'notepad_text_area_001',
@@ -324,7 +328,7 @@ Final line with special chars: @#$%^&*()`;
           paragraphs: paragraphs.length,
           chunksProcessed: chunks,
           estimatedTime: chunks * 2000, // 2 seconds per chunk
-          averageChunkSize: Math.round(text.length / chunks)
+          averageChunkSize: Math.round(text.length / chunks),
         };
       };
 
@@ -335,24 +339,29 @@ Final line with special chars: @#$%^&*()`;
       expect(result.paragraphs).toBe(50);
       expect(result.chunksProcessed).toBeGreaterThan(0);
 
-      console.log(`✅ Large document typing verified: ${result.totalCharacters} chars in ${result.chunksProcessed} chunks`);
+      console.log(
+        `✅ Large document typing verified: ${result.totalCharacters} chars in ${result.chunksProcessed} chunks`
+      );
     });
 
     test('should handle typing with word wrap', async () => {
-      const longLine = 'This is a very long line of text that should wrap around in Notepad when it exceeds the window width and demonstrates how the typing system handles word wrapping functionality in Windows applications.';
+      const longLine =
+        'This is a very long line of text that should wrap around in Notepad when it exceeds the window width and demonstrates how the typing system handles word wrapping functionality in Windows applications.';
 
       const mockWordWrapTyping = async (text: string) => {
         const averageWordLength = 7;
         const estimatedWraps = Math.floor(text.length / 80); // Assuming 80 chars per line
-        
+
         return {
           success: true,
           text: text,
           textLength: text.length,
           estimatedWraps: estimatedWraps,
           wordsTyped: text.split(' ').length,
-          averageWordLength: Math.round(text.replace(/[^a-zA-Z]/g, '').length / text.split(' ').length),
-          typingTime: text.length * 30 // 30ms per character
+          averageWordLength: Math.round(
+            text.replace(/[^a-zA-Z]/g, '').length / text.split(' ').length
+          ),
+          typingTime: text.length * 30, // 30ms per character
         };
       };
 
@@ -363,7 +372,9 @@ Final line with special chars: @#$%^&*()`;
       expect(result.wordsTyped).toBeGreaterThan(10);
       expect(result.estimatedWraps).toBeGreaterThan(0);
 
-      console.log(`✅ Word wrap typing verified: ${result.wordsTyped} words, ${result.estimatedWraps} estimated wraps`);
+      console.log(
+        `✅ Word wrap typing verified: ${result.wordsTyped} words, ${result.estimatedWraps} estimated wraps`
+      );
     });
 
     test('should maintain accuracy during interruptions', async () => {
@@ -371,24 +382,28 @@ Final line with special chars: @#$%^&*()`;
         {
           name: 'window_focus_loss',
           description: 'Typing continues after window loses focus',
-          simulatedDelay: 500
+          simulatedDelay: 500,
         },
         {
           name: 'system_notification',
           description: 'Typing continues despite system notification',
-          simulatedDelay: 200
+          simulatedDelay: 200,
         },
         {
           name: 'memory_pressure',
           description: 'Typing continues under memory pressure',
-          simulatedDelay: 1000
-        }
+          simulatedDelay: 1000,
+        },
       ];
 
       const testText = 'This text should be typed completely despite interruptions.';
 
       for (const scenario of testScenarios) {
-        const mockInterruptedTyping = async (text: string, interruptionType: string, delay: number) => {
+        const mockInterruptedTyping = async (
+          text: string,
+          interruptionType: string,
+          delay: number
+        ) => {
           // Simulate interrupted typing
           const midPoint = Math.floor(text.length / 2);
           const beforeInterruption = text.substring(0, midPoint);
@@ -402,11 +417,15 @@ Final line with special chars: @#$%^&*()`;
             fullText: text,
             interruptionDelay: delay,
             totalTime: text.length * 40 + delay,
-            recoverySuccessful: true
+            recoverySuccessful: true,
           };
         };
 
-        const result = await mockInterruptedTyping(testText, scenario.name, scenario.simulatedDelay);
+        const result = await mockInterruptedTyping(
+          testText,
+          scenario.name,
+          scenario.simulatedDelay
+        );
 
         expect(result.success).toBe(true);
         expect(result.fullText).toBe(testText);
@@ -441,7 +460,7 @@ Final line with special chars: @#$%^&*()`;
           errorMessage: 'Target window was closed during typing operation',
           charactersTypedBeforeError: 25,
           totalCharactersRequested: 50,
-          partialContent: 'This text was typed befor'
+          partialContent: 'This text was typed befor',
         };
       };
 
@@ -462,7 +481,7 @@ Final line with special chars: @#$%^&*()`;
           errorCode: 'ACCESS_DENIED',
           errorMessage: 'Insufficient permissions to interact with Notepad window',
           suggestedSolution: 'Run application as administrator or check security settings',
-          windowHandle: 'protected_window'
+          windowHandle: 'protected_window',
         };
       };
 
@@ -481,7 +500,10 @@ Final line with special chars: @#$%^&*()`;
       const benchmarkTests = [
         { text: 'Short text', expectedMaxTime: 500 },
         { text: 'Medium length text that should type at reasonable speed', expectedMaxTime: 2000 },
-        { text: 'This is a longer text passage that tests the typing speed and accuracy of the MCP Smart Typer system when working with Windows Notepad application to ensure it meets performance requirements.', expectedMaxTime: 8000 }
+        {
+          text: 'This is a longer text passage that tests the typing speed and accuracy of the MCP Smart Typer system when working with Windows Notepad application to ensure it meets performance requirements.',
+          expectedMaxTime: 8000,
+        },
       ];
 
       for (const benchmark of benchmarkTests) {
@@ -490,14 +512,14 @@ Final line with special chars: @#$%^&*()`;
           const avgWordLength = 5; // Average word length
           const charPerSecond = (wordsPerMinute * avgWordLength) / 60;
           const expectedTime = (text.length / charPerSecond) * 1000; // Convert to ms
-          
+
           return {
             success: true,
             text: text,
             actualTime: expectedTime * (0.8 + Math.random() * 0.4), // ±20% variance
             expectedTime: expectedTime,
             charactersPerSecond: charPerSecond,
-            wordsPerMinute: wordsPerMinute
+            wordsPerMinute: wordsPerMinute,
           };
         };
 
@@ -507,7 +529,9 @@ Final line with special chars: @#$%^&*()`;
         expect(result.actualTime).toBeLessThan(benchmark.expectedMaxTime);
         expect(result.wordsPerMinute).toBeGreaterThanOrEqual(40); // Minimum acceptable WPM
 
-        console.log(`✅ Benchmark passed: ${benchmark.text.length} chars in ${Math.round(result.actualTime)}ms`);
+        console.log(
+          `✅ Benchmark passed: ${benchmark.text.length} chars in ${Math.round(result.actualTime)}ms`
+        );
       }
     });
 
@@ -527,7 +551,7 @@ Final line with special chars: @#$%^&*()`;
             text: text,
             timeTaken: actualTime,
             charactersPerSecond: text.length / (actualTime / 1000),
-            success: true
+            success: true,
           };
         };
 
@@ -539,13 +563,16 @@ Final line with special chars: @#$%^&*()`;
       // Calculate consistency metrics
       const times = results.map(r => r.timeTaken);
       const average = times.reduce((sum, time) => sum + time, 0) / times.length;
-      const variance = times.reduce((sum, time) => sum + Math.pow(time - average, 2), 0) / times.length;
+      const variance =
+        times.reduce((sum, time) => sum + Math.pow(time - average, 2), 0) / times.length;
       const standardDeviation = Math.sqrt(variance);
       const coefficientOfVariation = standardDeviation / average;
 
       expect(coefficientOfVariation).toBeLessThan(0.15); // Less than 15% variation
 
-      console.log(`✅ Performance consistency verified: ${sessionCount} sessions, ${(coefficientOfVariation * 100).toFixed(1)}% CV`);
+      console.log(
+        `✅ Performance consistency verified: ${sessionCount} sessions, ${(coefficientOfVariation * 100).toFixed(1)}% CV`
+      );
     });
   });
 });

@@ -36,7 +36,17 @@ export interface FieldBounds {
 export class FieldAnalyzer {
   private visionModel: tf.LayersModel | null = null;
   private modelLoaded = false;
-  private readonly FIELD_TYPES = ['email', 'password', 'search', 'comment', 'username', 'name', 'phone', 'text', 'button'];
+  private readonly FIELD_TYPES = [
+    'email',
+    'password',
+    'search',
+    'comment',
+    'username',
+    'name',
+    'phone',
+    'text',
+    'button',
+  ];
   private readonly modelCacheDir: string;
 
   constructor(modelCacheDir?: string) {
@@ -64,7 +74,7 @@ export class FieldAnalyzer {
 
   private async loadOrCreateModel(): Promise<void> {
     const modelPath = path.join(this.modelCacheDir, 'field-classifier');
-    
+
     try {
       // Try to load cached model
       if (await this.modelExists(modelPath)) {
@@ -76,7 +86,7 @@ export class FieldAnalyzer {
         await this.saveModel(modelPath);
         logger.info('Created new vision model');
       }
-      
+
       this.modelLoaded = true;
     } catch (error) {
       logger.warn('Failed to load/create vision model, using fallback:', error);
@@ -190,7 +200,7 @@ export class FieldAnalyzer {
     const ocrContext = await this.getOCRContext(screenshotPath, bounds);
     if (ocrContext) {
       result.ocrContext = ocrContext;
-      
+
       const ocrBasedType = this.classifyFromOCRText(ocrContext.text);
       if (ocrBasedType.confidence > 0.6) {
         result.combinedType = ocrBasedType.type;
@@ -204,7 +214,7 @@ export class FieldAnalyzer {
     const visionResult = await this.getVisionClassification(screenshotPath, bounds);
     if (visionResult) {
       result.visionClassification = visionResult;
-      
+
       if (visionResult.confidence > 0.5) {
         result.combinedType = visionResult.predictedType;
         result.combinedConfidence = visionResult.confidence;
@@ -222,11 +232,14 @@ export class FieldAnalyzer {
     return result;
   }
 
-  private async getOCRContext(screenshotPath: string, bounds: FieldBounds): Promise<{ text: string; confidence: number } | null> {
+  private async getOCRContext(
+    screenshotPath: string,
+    bounds: FieldBounds
+  ): Promise<{ text: string; confidence: number } | null> {
     try {
       const ocr = getOCRInstance();
       const contextResults = await analyzeFieldContext(screenshotPath, [bounds]);
-      
+
       if (contextResults.length > 0 && contextResults[0].confidence > 30) {
         return {
           text: contextResults[0].context,
@@ -236,52 +249,71 @@ export class FieldAnalyzer {
     } catch (error) {
       logger.warn('OCR context extraction failed:', error);
     }
-    
+
     return null;
   }
 
   private classifyFromOCRText(text: string): { type: string; confidence: number } {
     const lowerText = text.toLowerCase();
-    
+
     // Email patterns
     if (lowerText.includes('email') || lowerText.includes('e-mail') || lowerText.includes('@')) {
       return { type: 'email', confidence: 0.9 };
     }
-    
+
     // Password patterns
-    if (lowerText.includes('password') || lowerText.includes('passwd') || lowerText.includes('pwd')) {
+    if (
+      lowerText.includes('password') ||
+      lowerText.includes('passwd') ||
+      lowerText.includes('pwd')
+    ) {
       return { type: 'password', confidence: 0.9 };
     }
-    
+
     // Search patterns
     if (lowerText.includes('search') || lowerText.includes('find') || lowerText.includes('query')) {
       return { type: 'search', confidence: 0.8 };
     }
-    
+
     // Comment patterns
-    if (lowerText.includes('comment') || lowerText.includes('message') || lowerText.includes('description')) {
+    if (
+      lowerText.includes('comment') ||
+      lowerText.includes('message') ||
+      lowerText.includes('description')
+    ) {
       return { type: 'comment', confidence: 0.8 };
     }
-    
+
     // Username patterns
-    if (lowerText.includes('username') || lowerText.includes('user') || lowerText.includes('login')) {
+    if (
+      lowerText.includes('username') ||
+      lowerText.includes('user') ||
+      lowerText.includes('login')
+    ) {
       return { type: 'username', confidence: 0.8 };
     }
-    
+
     // Name patterns
-    if (lowerText.includes('name') || lowerText.includes('first name') || lowerText.includes('last name')) {
+    if (
+      lowerText.includes('name') ||
+      lowerText.includes('first name') ||
+      lowerText.includes('last name')
+    ) {
       return { type: 'name', confidence: 0.7 };
     }
-    
+
     // Phone patterns
     if (lowerText.includes('phone') || lowerText.includes('tel') || lowerText.includes('mobile')) {
       return { type: 'phone', confidence: 0.7 };
     }
-    
+
     return { type: 'text', confidence: 0.3 };
   }
 
-  private async getVisionClassification(screenshotPath: string, bounds: FieldBounds): Promise<{
+  private async getVisionClassification(
+    screenshotPath: string,
+    bounds: FieldBounds
+  ): Promise<{
     predictedType: string;
     confidence: number;
     classProbabilities: Record<string, number>;
@@ -304,7 +336,8 @@ export class FieldAnalyzer {
         .toBuffer();
 
       // Convert to tensor
-      const imageTensor = tf.node.decodeImage(fieldImageBuffer, 3)
+      const imageTensor = tf.node
+        .decodeImage(fieldImageBuffer, 3)
         .expandDims(0)
         .div(255.0) as tf.Tensor4D;
 
@@ -337,24 +370,26 @@ export class FieldAnalyzer {
         confidence: maxProb,
         classProbabilities,
       };
-
     } catch (error) {
       logger.warn('Vision classification failed, using rule-based fallback:', error);
       return this.ruleBasedVisionClassification(screenshotPath, bounds);
     }
   }
 
-  private async ruleBasedVisionClassification(screenshotPath: string, bounds: FieldBounds): Promise<{
+  private async ruleBasedVisionClassification(
+    screenshotPath: string,
+    bounds: FieldBounds
+  ): Promise<{
     predictedType: string;
     confidence: number;
     classProbabilities: Record<string, number>;
   }> {
     const aspectRatio = bounds.width / bounds.height;
-    
+
     // Rule-based classification based on field dimensions
     let predictedType = 'text';
     let confidence = 0.4;
-    
+
     if (bounds.height > 100 && aspectRatio > 2) {
       predictedType = 'comment';
       confidence = 0.6;
@@ -365,12 +400,12 @@ export class FieldAnalyzer {
       predictedType = 'button';
       confidence = 0.5;
     }
-    
+
     const classProbabilities: Record<string, number> = {};
     this.FIELD_TYPES.forEach(type => {
       classProbabilities[type] = type === predictedType ? confidence : 0.1;
     });
-    
+
     return { predictedType, confidence, classProbabilities };
   }
 
@@ -380,34 +415,35 @@ export class FieldAnalyzer {
     visionResult?: { predictedType: string; confidence: number } | null
   ): { type: string; confidence: number } {
     const scores: Record<string, number> = {};
-    
+
     // Add semantic score
     if (semanticData?.type && semanticData.confidence) {
       scores[semanticData.type] = (scores[semanticData.type] || 0) + semanticData.confidence * 0.5;
     }
-    
+
     // Add OCR score
     if (ocrContext) {
       const ocrType = this.classifyFromOCRText(ocrContext.text);
       scores[ocrType.type] = (scores[ocrType.type] || 0) + ocrType.confidence * 0.3;
     }
-    
+
     // Add vision score
     if (visionResult) {
-      scores[visionResult.predictedType] = (scores[visionResult.predictedType] || 0) + visionResult.confidence * 0.2;
+      scores[visionResult.predictedType] =
+        (scores[visionResult.predictedType] || 0) + visionResult.confidence * 0.2;
     }
-    
+
     // Find the type with highest combined score
     let bestType = 'text';
     let bestScore = 0;
-    
+
     for (const [type, score] of Object.entries(scores)) {
       if (score > bestScore) {
         bestScore = score;
         bestType = type;
       }
     }
-    
+
     return { type: bestType, confidence: Math.min(bestScore, 1.0) };
   }
 
@@ -417,10 +453,10 @@ export class FieldAnalyzer {
       this.visionModel = null;
       this.modelLoaded = false;
     }
-    
+
     const ocr = getOCRInstance();
     await ocr.terminate();
-    
+
     logger.info('Field analyzer disposed');
   }
 }

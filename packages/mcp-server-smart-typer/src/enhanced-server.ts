@@ -17,26 +17,26 @@ import { chromium, Browser, Page } from 'playwright';
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { logger } from './utils/logger.js';
-import { 
-  generateAsyncJobId, 
-  registerJob, 
-  updateJobStatus, 
+import {
+  generateAsyncJobId,
+  registerJob,
+  updateJobStatus,
   getJobInfo,
-  cleanupOldJobs 
+  cleanupOldJobs,
 } from './utils/job-manager.js';
-import { 
-  detectFieldsRequest, 
+import {
+  detectFieldsRequest,
   detectFieldsResponse,
-  typeTextRequest, 
+  typeTextRequest,
   typeTextResponse,
-  getFieldValueRequest, 
+  getFieldValueRequest,
   getFieldValueResponse,
-  focusFieldRequest, 
+  focusFieldRequest,
   focusFieldResponse,
   DetectFieldsResponse,
   TypeTextResponse,
   GetFieldValueResponse,
-  FocusFieldResponse
+  FocusFieldResponse,
 } from './schemas/index.js';
 
 const SERVER_NAME = 'mcp-smart-typer-enhanced';
@@ -91,10 +91,10 @@ class EnhancedNativeClient {
     try {
       // Initialize gRPC client for Python helper
       await this.initializeGrpcClient();
-      
+
       // Initialize Playwright browser context
       await this.initializeBrowserContext();
-      
+
       logger.info('Enhanced client connected successfully', {
         grpcPort: this.grpcPort,
         browserReady: !!this.browser,
@@ -117,7 +117,7 @@ class EnhancedNativeClient {
       });
 
       const uiAutomation = grpc.loadPackageDefinition(packageDefinition).ui_automation as any;
-      
+
       this.grpcClient = new uiAutomation.UIAutomationService(
         `localhost:${this.grpcPort}`,
         grpc.credentials.createInsecure()
@@ -144,11 +144,11 @@ class EnhancedNativeClient {
     try {
       this.browser = await chromium.launch({
         headless: false, // Keep visible for UI automation
-        args: ['--disable-web-security', '--disable-features=VizDisplayCompositor']
+        args: ['--disable-web-security', '--disable-features=VizDisplayCompositor'],
       });
-      
+
       this.page = await this.browser.newPage();
-      
+
       // Set up page event listeners for field detection
       await this.page.addInitScript(() => {
         // Inject field detection helpers
@@ -156,15 +156,18 @@ class EnhancedNativeClient {
           detectFields: () => {
             const fields: any[] = [];
             const inputs = document.querySelectorAll('input, textarea, select');
-            
+
             inputs.forEach((element, index) => {
               const rect = element.getBoundingClientRect();
               const computedStyle = window.getComputedStyle(element);
-              
+
               if (rect.width > 0 && rect.height > 0 && computedStyle.visibility !== 'hidden') {
                 fields.push({
                   id: element.id || `browser_field_${Date.now()}_${index}`,
-                  name: element.getAttribute('name') || element.getAttribute('placeholder') || `field_${index}`,
+                  name:
+                    element.getAttribute('name') ||
+                    element.getAttribute('placeholder') ||
+                    `field_${index}`,
                   type: (element as HTMLInputElement).type || element.tagName.toLowerCase(),
                   bounds: {
                     x: rect.left + window.scrollX,
@@ -172,7 +175,8 @@ class EnhancedNativeClient {
                     width: rect.width,
                     height: rect.height,
                   },
-                  selector: element.tagName.toLowerCase() + 
+                  selector:
+                    element.tagName.toLowerCase() +
                     (element.id ? `#${element.id}` : '') +
                     (element.className ? `.${element.className.split(' ').join('.')}` : ''),
                   tagName: element.tagName,
@@ -183,9 +187,9 @@ class EnhancedNativeClient {
                 });
               }
             });
-            
+
             return fields;
-          }
+          },
         };
       });
 
@@ -213,15 +217,17 @@ class EnhancedNativeClient {
       if (this.page) {
         try {
           const browserFields = await this.detectBrowserFields(params);
-          fields.push(...browserFields.map(field => ({
-            ...field,
-            source: 'browser' as const,
-            metadata: {
-              ...field.metadata,
-              confidence: field.metadata.confidence || 0.9,
-              analysisMethod: 'browser_dom',
-            }
-          })));
+          fields.push(
+            ...browserFields.map(field => ({
+              ...field,
+              source: 'browser' as const,
+              metadata: {
+                ...field.metadata,
+                confidence: field.metadata.confidence || 0.9,
+                analysisMethod: 'browser_dom',
+              },
+            }))
+          );
 
           // Get browser window info
           const url = this.page.url();
@@ -242,15 +248,17 @@ class EnhancedNativeClient {
       if (this.grpcClient) {
         try {
           const desktopResult = await this.detectDesktopFields(params);
-          fields.push(...desktopResult.fields.map(field => ({
-            ...field,
-            source: 'desktop' as const,
-            metadata: {
-              ...field.metadata,
-              confidence: field.metadata.confidence || 0.8,
-              analysisMethod: 'desktop_ui',
-            }
-          })));
+          fields.push(
+            ...desktopResult.fields.map(field => ({
+              ...field,
+              source: 'desktop' as const,
+              metadata: {
+                ...field.metadata,
+                confidence: field.metadata.confidence || 0.8,
+                analysisMethod: 'desktop_ui',
+              },
+            }))
+          );
 
           if (!windowInfo && desktopResult.windowInfo) {
             windowInfo = desktopResult.windowInfo;
@@ -261,7 +269,7 @@ class EnhancedNativeClient {
       }
 
       updateJobStatus(asyncJobId, 'completed', { fieldsFound: fields.length });
-      
+
       return { fields, windowInfo };
     } catch (error) {
       updateJobStatus(asyncJobId, 'failed', { error: error.message });
@@ -291,7 +299,7 @@ class EnhancedNativeClient {
         confidence: 0.9,
         selector: field.selector,
         tagName: field.tagName,
-      }
+      },
     }));
   }
 
@@ -305,23 +313,24 @@ class EnhancedNativeClient {
         if (error) {
           reject(error);
         } else {
-          const fields = response.fields?.map((field: any, index: number) => ({
-            id: field.id || `desktop_field_${Date.now()}_${index}`,
-            name: field.name || `desktop_field_${index}`,
-            type: this.mapDesktopFieldType(field.type),
-            source: 'desktop' as const,
-            metadata: {
-              description: field.description,
-              placeholder: field.placeholder,
-              maxLength: field.maxLength,
-              required: field.required,
-              pattern: field.pattern,
-              bounds: field.bounds,
-              confidence: field.confidence || 0.8,
-              windowHandle: field.windowHandle,
-              controlId: field.controlId,
-            }
-          })) || [];
+          const fields =
+            response.fields?.map((field: any, index: number) => ({
+              id: field.id || `desktop_field_${Date.now()}_${index}`,
+              name: field.name || `desktop_field_${index}`,
+              type: this.mapDesktopFieldType(field.type),
+              source: 'desktop' as const,
+              metadata: {
+                description: field.description,
+                placeholder: field.placeholder,
+                maxLength: field.maxLength,
+                required: field.required,
+                pattern: field.pattern,
+                bounds: field.bounds,
+                confidence: field.confidence || 0.8,
+                windowHandle: field.windowHandle,
+                controlId: field.controlId,
+              },
+            })) || [];
 
           resolve({ fields, windowInfo: response.windowInfo });
         }
@@ -331,24 +340,24 @@ class EnhancedNativeClient {
 
   private mapBrowserFieldType(browserType: string): Field['type'] {
     const typeMap: Record<string, Field['type']> = {
-      'text': 'text',
-      'password': 'password',
-      'email': 'email',
-      'number': 'number',
-      'tel': 'tel',
-      'url': 'url',
-      'textarea': 'textarea',
-      'select': 'select',
+      text: 'text',
+      password: 'password',
+      email: 'email',
+      number: 'number',
+      tel: 'tel',
+      url: 'url',
+      textarea: 'textarea',
+      select: 'select',
     };
     return typeMap[browserType] || 'text';
   }
 
   private mapDesktopFieldType(desktopType: string): Field['type'] {
     const typeMap: Record<string, Field['type']> = {
-      'edit': 'text',
-      'password': 'password',
-      'numeric': 'number',
-      'combobox': 'select',
+      edit: 'text',
+      password: 'password',
+      numeric: 'number',
+      combobox: 'select',
     };
     return typeMap[desktopType] || 'text';
   }
@@ -359,14 +368,22 @@ class EnhancedNativeClient {
     delay?: number;
     clearFirst?: boolean;
     pressEnter?: boolean;
-  }): Promise<{ success: boolean; charactersTyped?: number; errorCode?: string; errorMessage?: string }> {
+  }): Promise<{
+    success: boolean;
+    charactersTyped?: number;
+    errorCode?: string;
+    errorMessage?: string;
+  }> {
     const asyncJobId = generateAsyncJobId();
-    registerJob(asyncJobId, 'type_text', { fieldId: params.fieldId, textLength: params.text.length });
+    registerJob(asyncJobId, 'type_text', {
+      fieldId: params.fieldId,
+      textLength: params.text.length,
+    });
 
     try {
       // Determine if this is a browser or desktop field
       const fieldSource = this.determineFieldSource(params.fieldId);
-      
+
       if (fieldSource === 'browser' && this.page) {
         return await this.typeBrowserText(params);
       } else if (fieldSource === 'desktop' && this.grpcClient) {
@@ -379,7 +396,7 @@ class EnhancedNativeClient {
       return {
         success: false,
         errorCode: 'TYPE_ERROR',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -388,20 +405,20 @@ class EnhancedNativeClient {
     if (!this.page) throw new Error('Browser not available');
 
     const selector = this.extractSelectorFromFieldId(params.fieldId);
-    
+
     try {
       // Find and focus the element
       await this.page.waitForSelector(selector, { timeout: 5000 });
-      
+
       if (params.clearFirst) {
         await this.page.fill(selector, '');
       }
-      
+
       // Type with delay if specified
-      await this.page.type(selector, params.text, { 
-        delay: params.delay || 0 
+      await this.page.type(selector, params.text, {
+        delay: params.delay || 0,
       });
-      
+
       if (params.pressEnter) {
         await this.page.press(selector, 'Enter');
       }
@@ -451,12 +468,12 @@ class EnhancedNativeClient {
         this.browser = null;
         this.page = null;
       }
-      
+
       if (this.grpcClient) {
         // gRPC client doesn't need explicit close in this implementation
         this.grpcClient = null;
       }
-      
+
       logger.info('Enhanced client disconnected');
     } catch (error) {
       logger.error('Error during enhanced client disconnect:', error);
@@ -466,7 +483,7 @@ class EnhancedNativeClient {
   // Additional methods for other operations...
   async getFieldValue(params: { fieldId: string; maxLength?: number }): Promise<any> {
     const fieldSource = this.determineFieldSource(params.fieldId);
-    
+
     if (fieldSource === 'browser' && this.page) {
       const selector = this.extractSelectorFromFieldId(params.fieldId);
       const value = await this.page.inputValue(selector).catch(() => '');
@@ -479,13 +496,17 @@ class EnhancedNativeClient {
         });
       });
     }
-    
+
     throw new Error('No suitable client available');
   }
 
-  async focusField(params: { fieldId: string; bringToFront?: boolean; scrollIntoView?: boolean }): Promise<any> {
+  async focusField(params: {
+    fieldId: string;
+    bringToFront?: boolean;
+    scrollIntoView?: boolean;
+  }): Promise<any> {
     const fieldSource = this.determineFieldSource(params.fieldId);
-    
+
     if (fieldSource === 'browser' && this.page) {
       const selector = this.extractSelectorFromFieldId(params.fieldId);
       await this.page.focus(selector);
@@ -501,7 +522,7 @@ class EnhancedNativeClient {
         });
       });
     }
-    
+
     throw new Error('No suitable client available');
   }
 }
@@ -529,12 +550,15 @@ async function main(): Promise<void> {
     );
 
     // Set up job cleanup interval
-    setInterval(() => {
-      const cleaned = cleanupOldJobs(30); // Clean jobs older than 30 minutes
-      if (cleaned > 0) {
-        logger.info(`Cleaned up ${cleaned} old jobs`);
-      }
-    }, 5 * 60 * 1000); // Every 5 minutes
+    setInterval(
+      () => {
+        const cleaned = cleanupOldJobs(30); // Clean jobs older than 30 minutes
+        if (cleaned > 0) {
+          logger.info(`Cleaned up ${cleaned} old jobs`);
+        }
+      },
+      5 * 60 * 1000
+    ); // Every 5 minutes
 
     // Register list_tools handler
     server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -542,16 +566,18 @@ async function main(): Promise<void> {
         tools: [
           {
             name: 'detect_fields',
-            description: 'Detect input fields from both browser and desktop contexts with unified Field objects',
+            description:
+              'Detect input fields from both browser and desktop contexts with unified Field objects',
             inputSchema: {
               type: 'object',
               properties: {
                 contextHint: {
                   type: 'string',
-                  description: 'Context hint for field detection (e.g., "login-form", "search-box")',
+                  description:
+                    'Context hint for field detection (e.g., "login-form", "search-box")',
                 },
                 windowTitle: {
-                  type: 'string', 
+                  type: 'string',
                   description: 'Specific window title to focus on',
                 },
                 includeHidden: {
@@ -607,7 +633,7 @@ async function main(): Promise<void> {
                     },
                     pressEnter: {
                       type: 'boolean',
-                      description: 'Press Enter after typing', 
+                      description: 'Press Enter after typing',
                       default: false,
                     },
                   },
@@ -678,7 +704,7 @@ async function main(): Promise<void> {
     });
 
     // Register call_tool handler with enhanced functionality
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async request => {
       const { name, arguments: args } = request.params;
 
       try {
@@ -688,7 +714,7 @@ async function main(): Promise<void> {
             logger.info('Enhanced field detection:', params);
 
             const result = await nativeClient.detectFields(params);
-            
+
             // Process fields to include source information
             const enhancedFields = result.fields.map(field => ({
               id: field.id,
@@ -713,8 +739,11 @@ async function main(): Promise<void> {
               params: {
                 jobId: response.asyncJobId,
                 operation: 'detect_fields',
-                result: { fieldsFound: enhancedFields.length, sources: enhancedFields.map(f => f.source) }
-              }
+                result: {
+                  fieldsFound: enhancedFields.length,
+                  sources: enhancedFields.map(f => f.source),
+                },
+              },
             });
 
             return {
@@ -730,10 +759,10 @@ async function main(): Promise<void> {
           case 'type_text': {
             const params = typeTextRequest.parse(args);
             const startTime = Date.now();
-            
-            logger.info('Enhanced text typing:', { 
-              fieldId: params.fieldId, 
-              textLength: params.text.length 
+
+            logger.info('Enhanced text typing:', {
+              fieldId: params.fieldId,
+              textLength: params.text.length,
             });
 
             const result = await nativeClient.typeText({
@@ -762,8 +791,8 @@ async function main(): Promise<void> {
               params: {
                 jobId: asyncJobId,
                 operation: 'type_text',
-                result: { success: result.success, charactersTyped: result.charactersTyped }
-              }
+                result: { success: result.success, charactersTyped: result.charactersTyped },
+              },
             });
 
             return {
@@ -832,7 +861,7 @@ async function main(): Promise<void> {
           case 'get_job_status': {
             const { jobId } = args as { jobId: string };
             const jobInfo = getJobInfo(jobId);
-            
+
             return {
               content: [
                 {
@@ -848,7 +877,7 @@ async function main(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Error in enhanced tool ${name}:`, error);
-        
+
         const errorResponse = {
           success: false,
           errorCode: error instanceof z.ZodError ? 'VALIDATION_ERROR' : 'TOOL_ERROR',
@@ -862,8 +891,8 @@ async function main(): Promise<void> {
           params: {
             jobId: errorResponse.asyncJobId,
             operation: name,
-            error: errorResponse.errorMessage
-          }
+            error: errorResponse.errorMessage,
+          },
         });
 
         return {
@@ -908,7 +937,6 @@ async function main(): Promise<void> {
     await server.connect(transport);
     logger.info(`${SERVER_NAME} v${SERVER_VERSION} running with enhanced capabilities`);
     logger.info('Enhanced MCP Smart Typer ready for connections!');
-    
   } catch (error) {
     logger.error('Failed to start enhanced MCP server:', error);
     process.exit(1);
@@ -916,7 +944,7 @@ async function main(): Promise<void> {
 }
 
 // Run the enhanced server
-main().catch((error) => {
+main().catch(error => {
   logger.error('Unhandled error in enhanced server:', error);
   process.exit(1);
 });

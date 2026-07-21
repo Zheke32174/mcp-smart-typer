@@ -42,15 +42,15 @@ class DemoGifGenerator {
 
   async initialize(): Promise<void> {
     console.log('🎬 Initializing demo GIF generator...');
-    
-    this.browser = await chromium.launch({ 
+
+    this.browser = await chromium.launch({
       headless: false, // Show browser for recording
-      slowMo: 500 // Add delay for better demo visibility
+      slowMo: 500, // Add delay for better demo visibility
     });
-    
+
     this.page = await this.browser.newPage();
     await this.page.setViewportSize({ width: 1200, height: 800 });
-    
+
     console.log('✅ Browser initialized for demo recording');
   }
 
@@ -63,7 +63,7 @@ class DemoGifGenerator {
 
   async generateAllDemos(): Promise<void> {
     console.log('🎥 Starting demo GIF generation...');
-    
+
     await this.initialize();
 
     const scenarios: DemoScenario[] = [
@@ -79,8 +79,8 @@ class DemoGifGenerator {
           { action: 'highlight', target: '#password', description: 'Highlight password field' },
           { action: 'wait', duration: 1500, description: 'Show field detection' },
           { action: 'highlight', target: '#remember', description: 'Highlight checkbox field' },
-          { action: 'wait', duration: 1000, description: 'Show field detection complete' }
-        ]
+          { action: 'wait', duration: 1000, description: 'Show field detection complete' },
+        ],
       },
       {
         name: 'typing-accuracy-demo',
@@ -90,14 +90,26 @@ class DemoGifGenerator {
           { action: 'navigate', description: 'Load sample login page' },
           { action: 'wait', duration: 1000, description: 'Wait for page load' },
           { action: 'click', target: '#username', description: 'Focus username field' },
-          { action: 'type', target: '#username', value: 'demo.user@example.com', duration: 2000, description: 'Type email address' },
+          {
+            action: 'type',
+            target: '#username',
+            value: 'demo.user@example.com',
+            duration: 2000,
+            description: 'Type email address',
+          },
           { action: 'wait', duration: 1000, description: 'Pause after typing' },
           { action: 'click', target: '#password', description: 'Focus password field' },
-          { action: 'type', target: '#password', value: 'SecurePassword123!', duration: 2000, description: 'Type password' },
+          {
+            action: 'type',
+            target: '#password',
+            value: 'SecurePassword123!',
+            duration: 2000,
+            description: 'Type password',
+          },
           { action: 'wait', duration: 1000, description: 'Pause after typing' },
           { action: 'click', target: '#remember', description: 'Click remember checkbox' },
-          { action: 'wait', duration: 1000, description: 'Show completed form' }
-        ]
+          { action: 'wait', duration: 1000, description: 'Show completed form' },
+        ],
       },
       {
         name: 'search-form-demo',
@@ -107,22 +119,50 @@ class DemoGifGenerator {
           { action: 'navigate', description: 'Load sample search page' },
           { action: 'wait', duration: 1000, description: 'Wait for page load' },
           { action: 'click', target: '#mainSearch', description: 'Focus search field' },
-          { action: 'type', target: '#mainSearch', value: 'laptop computers', duration: 1500, description: 'Type search query' },
+          {
+            action: 'type',
+            target: '#mainSearch',
+            value: 'laptop computers',
+            duration: 1500,
+            description: 'Type search query',
+          },
           { action: 'wait', duration: 800, description: 'Pause after search' },
           { action: 'click', target: '#category', description: 'Focus category dropdown' },
-          { action: 'click', target: '#category option[value="electronics"]', description: 'Select electronics category' },
+          {
+            action: 'click',
+            target: '#category option[value="electronics"]',
+            description: 'Select electronics category',
+          },
           { action: 'wait', duration: 800, description: 'Pause after selection' },
           { action: 'click', target: '#minPrice', description: 'Focus min price field' },
-          { action: 'type', target: '#minPrice', value: '500', duration: 800, description: 'Type minimum price' },
+          {
+            action: 'type',
+            target: '#minPrice',
+            value: '500',
+            duration: 800,
+            description: 'Type minimum price',
+          },
           { action: 'wait', duration: 500, description: 'Pause' },
           { action: 'click', target: '#maxPrice', description: 'Focus max price field' },
-          { action: 'type', target: '#maxPrice', value: '2000', duration: 800, description: 'Type maximum price' },
+          {
+            action: 'type',
+            target: '#maxPrice',
+            value: '2000',
+            duration: 800,
+            description: 'Type maximum price',
+          },
           { action: 'wait', duration: 500, description: 'Pause' },
           { action: 'click', target: '#location', description: 'Focus location field' },
-          { action: 'type', target: '#location', value: 'San Francisco, CA', duration: 1500, description: 'Type location' },
-          { action: 'wait', duration: 1000, description: 'Show completed search form' }
-        ]
-      }
+          {
+            action: 'type',
+            target: '#location',
+            value: 'San Francisco, CA',
+            duration: 1500,
+            description: 'Type location',
+          },
+          { action: 'wait', duration: 1000, description: 'Show completed search form' },
+        ],
+      },
     ];
 
     for (const scenario of scenarios) {
@@ -136,17 +176,17 @@ class DemoGifGenerator {
     }
 
     await this.cleanup();
-    
+
     // Generate README content
     await this.generateDemoReadme(scenarios);
-    
+
     console.log('\n🎉 All demo GIFs generated successfully!');
     console.log('📁 Demos saved in:', this.demoDir);
   }
 
   private async recordScenario(scenario: DemoScenario): Promise<void> {
     if (!this.page) throw new Error('Page not initialized');
-    
+
     this.currentScenario = scenario.name;
     const screenshots: string[] = [];
     let stepIndex = 0;
@@ -155,19 +195,22 @@ class DemoGifGenerator {
 
     for (const step of scenario.steps) {
       console.log(`   ${stepIndex + 1}. ${step.description}`);
-      
+
       try {
         await this.executeStep(step);
-        
+
         // Take screenshot after each step
-        const screenshotPath = join(this.screenshotDir, `${scenario.name}-step-${stepIndex.toString().padStart(2, '0')}.png`);
-        await this.page.screenshot({ 
-          path: screenshotPath, 
+        const screenshotPath = join(
+          this.screenshotDir,
+          `${scenario.name}-step-${stepIndex.toString().padStart(2, '0')}.png`
+        );
+        await this.page.screenshot({
+          path: screenshotPath,
           fullPage: false,
-          animations: 'disabled'
+          animations: 'disabled',
         });
         screenshots.push(screenshotPath);
-        
+
         stepIndex++;
       } catch (error) {
         console.warn(`   ⚠️  Step failed: ${step.description}`, error);
@@ -203,8 +246,8 @@ class DemoGifGenerator {
 
       case 'type':
         if (step.target && step.value) {
-          await this.page.type(step.target, step.value, { 
-            delay: step.duration ? step.duration / step.value.length : 100 
+          await this.page.type(step.target, step.value, {
+            delay: step.duration ? step.duration / step.value.length : 100,
           });
         }
         break;
@@ -227,7 +270,7 @@ class DemoGifGenerator {
     if (!this.page) return;
 
     // Add highlight border to element
-    await this.page.evaluate((sel) => {
+    await this.page.evaluate(sel => {
       const element = document.querySelector(sel);
       if (element) {
         (element as HTMLElement).style.border = '3px solid #007bff';
@@ -239,7 +282,7 @@ class DemoGifGenerator {
     await this.page.waitForTimeout(800);
 
     // Remove highlight
-    await this.page.evaluate((sel) => {
+    await this.page.evaluate(sel => {
       const element = document.querySelector(sel);
       if (element) {
         (element as HTMLElement).style.border = '';
@@ -248,25 +291,27 @@ class DemoGifGenerator {
     }, selector);
   }
 
-  private async createGifFromScreenshots(screenshots: string[], scenarioName: string): Promise<void> {
+  private async createGifFromScreenshots(
+    screenshots: string[],
+    scenarioName: string
+  ): Promise<void> {
     console.log(`   🎞️  Converting ${screenshots.length} screenshots to GIF...`);
-    
+
     try {
       // Use ImageMagick or similar tool to create GIF
       // This is a simplified version - in practice, you'd use a proper tool
       const gifPath = join(this.demoDir, `${scenarioName}.gif`);
-      
+
       // Create a simple HTML file that can be used to demonstrate the functionality
       // In a real implementation, you'd use tools like ffmpeg or ImageMagick
       const htmlDemo = this.createHtmlDemo(scenarioName, screenshots);
       const htmlPath = join(this.demoDir, `${scenarioName}.html`);
       writeFileSync(htmlPath, htmlDemo);
-      
+
       console.log(`   ✅ Demo saved: ${htmlPath}`);
-      
+
       // Simulate GIF creation (in real implementation, use proper tools)
       this.simulateGifCreation(screenshots, gifPath);
-      
     } catch (error) {
       console.error(`   ❌ Failed to create GIF:`, error);
     }
@@ -343,9 +388,13 @@ class DemoGifGenerator {
         <h1 class="demo-title">🎬 MCP Smart Typer Demo: ${scenarioName.replace(/-/g, ' ').toUpperCase()}</h1>
         
         <div class="screenshot-slider" id="slider">
-            ${screenshots.map((screenshot, index) => `
+            ${screenshots
+              .map(
+                (screenshot, index) => `
                 <img src="${screenshot}" class="screenshot ${index === 0 ? 'active' : ''}" alt="Demo step ${index + 1}">
-            `).join('')}
+            `
+              )
+              .join('')}
         </div>
         
         <div class="controls">
@@ -408,17 +457,19 @@ class DemoGifGenerator {
     // In a real implementation, you would use tools like:
     // - ffmpeg: ffmpeg -framerate 2 -pattern_type glob -i "*.png" -vf "scale=800:-1" output.gif
     // - ImageMagick: convert -delay 200 -loop 0 *.png output.gif
-    
+
     console.log(`   📝 GIF creation command (for manual execution):`);
-    console.log(`   ffmpeg -framerate 2 -pattern_type glob -i "${this.screenshotDir}/${this.currentScenario}-step-*.png" -vf "scale=800:-1" "${gifPath}"`);
-    
+    console.log(
+      `   ffmpeg -framerate 2 -pattern_type glob -i "${this.screenshotDir}/${this.currentScenario}-step-*.png" -vf "scale=800:-1" "${gifPath}"`
+    );
+
     // Create a batch file for Windows users
     const batchContent = `@echo off
 echo Creating GIF for ${this.currentScenario}...
 ffmpeg -framerate 2 -pattern_type glob -i "${this.screenshotDir}/${this.currentScenario}-step-*.png" -vf "scale=800:-1" "${gifPath}"
 echo GIF created: ${gifPath}
 pause`;
-    
+
     writeFileSync(join(this.demoDir, `create-${this.currentScenario}-gif.bat`), batchContent);
   }
 
@@ -429,7 +480,9 @@ This directory contains demonstration materials for the MCP Smart Typer project.
 
 ## Generated Demos
 
-${scenarios.map(scenario => `
+${scenarios
+  .map(
+    scenario => `
 ### ${scenario.name.replace(/-/g, ' ').toUpperCase()}
 
 **Description:** ${scenario.description}
@@ -440,7 +493,9 @@ ${scenarios.map(scenario => `
 - 📝 \`create-${scenario.name}-gif.bat\` - Batch file to create GIF from screenshots
 
 **Duration:** ~${Math.round(scenario.duration / 1000)}s
-`).join('')}
+`
+  )
+  .join('')}
 
 ## How to Generate GIFs
 

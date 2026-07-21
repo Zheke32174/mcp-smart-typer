@@ -48,10 +48,11 @@ export class TesseractOCR {
     try {
       logger.info('Initializing Tesseract OCR worker...');
       this.worker = await createWorker('eng');
-      
+
       // Configure for better field detection
       await this.worker.setParameters({
-        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@._-+()[]{}:;,?!/\\|"\'`~#$%^&*=<> ',
+        tessedit_char_whitelist:
+          '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@._-+()[]{}:;,?!/\\|"\'`~#$%^&*=<> ',
         tessedit_pageseg_mode: '6', // Uniform block of text
       });
 
@@ -78,15 +79,13 @@ export class TesseractOCR {
             left: region.x,
             top: region.y,
             width: region.width,
-            height: region.height
+            height: region.height,
           })
           .png()
           .toBuffer();
       } else {
         // Process full image
-        imageBuffer = await sharp(imagePath)
-          .png()
-          .toBuffer();
+        imageBuffer = await sharp(imagePath).png().toBuffer();
       }
 
       // Enhance image for better OCR
@@ -97,60 +96,62 @@ export class TesseractOCR {
         .toBuffer();
 
       const result = await this.worker!.recognize(enhancedBuffer);
-      
+
       return {
         text: result.data.text.trim(),
         confidence: result.data.confidence,
         words: result.data.words.map(word => ({
           text: word.text,
           confidence: word.confidence,
-          bbox: word.bbox
+          bbox: word.bbox,
         })),
         blocks: result.data.blocks.map(block => ({
           text: block.text,
           confidence: block.confidence,
-          bbox: block.bbox
-        }))
+          bbox: block.bbox,
+        })),
       };
-
     } catch (error) {
       logger.error('OCR text extraction failed:', error);
       return {
         text: '',
         confidence: 0,
         words: [],
-        blocks: []
+        blocks: [],
       };
     }
   }
 
-  async findTextNearFields(imagePath: string, fieldBounds: Array<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }>): Promise<Array<{ fieldIndex: number; nearbyText: string; confidence: number }>> {
+  async findTextNearFields(
+    imagePath: string,
+    fieldBounds: Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>
+  ): Promise<Array<{ fieldIndex: number; nearbyText: string; confidence: number }>> {
     const results: Array<{ fieldIndex: number; nearbyText: string; confidence: number }> = [];
 
     for (let i = 0; i < fieldBounds.length; i++) {
       const field = fieldBounds[i];
-      
+
       // Define search region around the field (expand by 100px in each direction)
       const searchRegion: OCRRegion = {
         x: Math.max(0, field.x - 100),
         y: Math.max(0, field.y - 100),
         width: field.width + 200,
-        height: field.height + 200
+        height: field.height + 200,
       };
 
       try {
         const ocrResult = await this.extractText(imagePath, searchRegion);
-        
+
         if (ocrResult.text && ocrResult.confidence > 30) {
           results.push({
             fieldIndex: i,
             nearbyText: ocrResult.text,
-            confidence: ocrResult.confidence
+            confidence: ocrResult.confidence,
           });
         }
       } catch (error) {
@@ -187,10 +188,10 @@ export async function analyzeFieldContext(
 ): Promise<Array<{ fieldIndex: number; context: string; confidence: number }>> {
   const ocr = getOCRInstance();
   const nearbyTexts = await ocr.findTextNearFields(imagePath, fieldBounds);
-  
+
   return nearbyTexts.map(result => ({
     fieldIndex: result.fieldIndex,
     context: result.nearbyText,
-    confidence: result.confidence
+    confidence: result.confidence,
   }));
 }

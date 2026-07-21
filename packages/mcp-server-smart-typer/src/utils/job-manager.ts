@@ -38,7 +38,11 @@ export function registerJob(id: string, operation: string, metadata?: Record<str
 /**
  * Update job status
  */
-export function updateJobStatus(id: string, status: 'completed' | 'failed', metadata?: Record<string, any>): void {
+export function updateJobStatus(
+  id: string,
+  status: 'completed' | 'failed',
+  metadata?: Record<string, any>
+): void {
   const job = activeJobs.get(id);
   if (job) {
     job.status = status;
@@ -61,14 +65,14 @@ export function getJobInfo(id: string): JobInfo | undefined {
 export function cleanupOldJobs(olderThanMinutes: number = 60): number {
   const cutoffTime = new Date(Date.now() - olderThanMinutes * 60 * 1000);
   let cleanedCount = 0;
-  
+
   for (const [id, job] of activeJobs.entries()) {
     if (job.status !== 'pending' && job.startTime < cutoffTime) {
       activeJobs.delete(id);
       cleanedCount++;
     }
   }
-  
+
   return cleanedCount;
 }
 
